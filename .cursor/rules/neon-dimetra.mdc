@@ -1,0 +1,35 @@
+---
+description: Neon Lakebase Postgres — Dimetra backend database and CLI workflow
+alwaysApply: true
+---
+
+# Neon for Dimetra
+
+Follow Neon agent skills in `.agents/skills/` (see `skills-lock.json`).
+
+## When to read which skill
+
+| Task | Skill |
+|------|--------|
+| Overview, link, env pull, branches | `neon` |
+| SQL, schema, `DATABASE_URL`, pooled vs direct | `neon-postgres` |
+| Auth / users | `neon-auth` |
+
+Prefer the **Neon CLI** over MCP when it is installed and authenticated.
+
+## This repo
+
+- **Connection:** `DATABASE_URL` (Neon **pooled** string). Loaded from `.env`, then `.env.local` (`src/loadEnv.ts`).
+- **Schema:** `src/db/schema.ts` — applied on every backend start via `initDb()` in `src/db/initDb.ts`.
+- **Driver:** `pg` pool in `src/db/pool.ts` — not SQLite.
+- **Do not** commit `.env.local`, `.neon`, or API keys.
+
+## Common commands
+
+```bash
+neon env pull          # refresh DATABASE_URL for linked branch (.neon)
+npm run db:init        # test connection + create tables
+npm run build && npm start
+```
+
+Official agent setup: https://neon.com/prompts/agent-setup.md

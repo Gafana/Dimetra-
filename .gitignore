@@ -1,0 +1,12 @@
+node_modules/
+dist/
+database.sqlite
+database.sqlite-*
+prod.db
+prod.db-*
+data/
+.env
+.env.local
+.neon
+frontend/.env
+.tools/

@@ -1,0 +1,125 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+
+  --color-forest-950: #0c1210;
+  --color-forest-900: #141f1a;
+  --color-forest-850: #172420;
+  --color-forest-800: #1a2421;
+  --color-forest-700: #24312c;
+  --color-sage-100: #e8f0eb;
+  --color-sage-200: #c9ddd0;
+  --color-sage-300: #a8c3b0;
+  --color-sage-400: #8fb89a;
+  --color-sage-500: #6fa383;
+  --color-mint-glow: #b8d4c4;
+}
+
+:root {
+  --tg-bg: #141f1a;
+  --tg-text: #e8f0eb;
+  --tg-hint: #8fb89a;
+  --tg-link: #b8d4c4;
+  --tg-button: #8fb89a;
+  --tg-button-text: #0f1612;
+  --tg-secondary-bg: rgba(255, 255, 255, 0.06);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--tg-text);
+  font-family: var(--font-sans);
+  background: var(--color-forest-900);
+  color-scheme: dark;
+}
+
+select option {
+  background: #1a2421;
+  color: #e8f0eb;
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(111, 163, 131, 0.22), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(26, 36, 33, 0.9), transparent 45%),
+    linear-gradient(180deg, #1a2421 0%, #141f1a 45%, #0c1210 100%);
+}
+
+.app-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #a8c3b0 0%, #8fb89a 55%, #6fa383 100%);
+  color: #0f1612;
+  box-shadow: 0 4px 20px rgba(143, 184, 154, 0.35);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.input-glass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--tg-text);
+}
+
+.input-glass::placeholder {
+  color: rgba(168, 195, 176, 0.55);
+}
+
+.input-glass:focus {
+  outline: none;
+  border-color: rgba(184, 212, 196, 0.45);
+  box-shadow: 0 0 0 3px rgba(143, 184, 154, 0.15);
+}
+
+.chip-active {
+  background: rgba(143, 184, 154, 0.22);
+  border-color: rgba(184, 212, 196, 0.45);
+  box-shadow: 0 0 24px rgba(143, 184, 154, 0.25);
+}
+
+.nav-pill-active {
+  background: rgba(143, 184, 154, 0.25);
+  box-shadow: 0 0 20px rgba(143, 184, 154, 0.35);
+  color: #e8f0eb;
+}
