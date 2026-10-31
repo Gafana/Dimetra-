@@ -38,14 +38,24 @@ export const MAIN_MENU_HEAR_LABELS: MainMenuLabel[] = [
   MAIN_MENU_LABELS.overdue,
 ];
 
-export function mainMenuReplyExtra(extra: Record<string, unknown> = {}): Record<string, unknown> {
-  const url = resolveTelegramWebAppUrl();
-  const openButton = url
-    ? Markup.button.webApp(MAIN_MENU_LABELS.openApp, url)
-    : Markup.button.text(MAIN_MENU_LABELS.openApp);
+/** Inline web_app passes initData; reply-keyboard web_app does not. */
+export const INLINE_OPEN_APP_LABEL = 'Открыть';
 
+export function inlineOpenAppExtra(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  const url = resolveTelegramWebAppUrl();
+  if (!url) {
+    return extra;
+  }
+  const inline = Markup.inlineKeyboard([Markup.button.webApp(INLINE_OPEN_APP_LABEL, url)]);
+  return {
+    ...extra,
+    ...inline,
+  };
+}
+
+export function mainMenuReplyExtra(extra: Record<string, unknown> = {}): Record<string, unknown> {
   const keyboard = Markup.keyboard([
-    [openButton, Markup.button.text(MAIN_MENU_LABELS.today)],
+    [Markup.button.text(MAIN_MENU_LABELS.openApp), Markup.button.text(MAIN_MENU_LABELS.today)],
     [Markup.button.text(MAIN_MENU_LABELS.overdue)],
   ])
     .resize()
