@@ -13,6 +13,8 @@ export type CareActionType = PlantCareAction | 'repot';
 
 export type CalendarEventKind = 'scheduled' | 'completed';
 
+export type CalendarEventStatus = 'scheduled' | 'completed' | 'overdue';
+
 export interface CalendarEvent {
   id: string;
   plant_id: string;
@@ -20,6 +22,7 @@ export interface CalendarEvent {
   room_name: string | null;
   action_type: CareActionType;
   event_kind: CalendarEventKind;
+  status: CalendarEventStatus;
   date: string;
   done_at?: string;
 }

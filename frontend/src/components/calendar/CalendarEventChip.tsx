@@ -1,5 +1,7 @@
 import type { CalendarEvent } from '../../api/types.js';
 import { careActionLabel, careActionTone } from '../../lib/careLabels.js';
+import { CALENDAR_STATUS_LABEL } from '../../lib/calendarEventStatus.js';
+import { CalendarEventStatusDot } from './CalendarEventStatusDot.js';
 
 const toneClasses: Record<'water' | 'feed' | 'repot', string> = {
   water: 'bg-sky-500/25 text-sky-100 border-sky-400/35',
@@ -16,6 +18,7 @@ export function CalendarEventChip({
 }) {
   const tone = careActionTone(event.action_type);
   const completed = event.event_kind === 'completed';
+  const statusLabel = CALENDAR_STATUS_LABEL[event.status];
 
   return (
     <div
@@ -25,17 +28,23 @@ export function CalendarEventChip({
         completed ? 'opacity-75' : '',
         compact ? 'max-w-full' : '',
       ].join(' ')}
-      title={`${careActionLabel(event.action_type)} · ${event.plant_name}${event.room_name ? ` · ${event.room_name}` : ''}`}
+      title={`${statusLabel} · ${careActionLabel(event.action_type)} · ${event.plant_name}${event.room_name ? ` · ${event.room_name}` : ''}`}
     >
       {compact ? (
-        <>
-          <span className="opacity-90">{careActionLabel(event.action_type)}</span>
-          <span className="mx-0.5 opacity-50">·</span>
-          <span className="font-normal opacity-95">{event.plant_name}</span>
-        </>
+        <span className="flex min-w-0 items-center gap-1">
+          <CalendarEventStatusDot status={event.status} size="xs" />
+          <span className="min-w-0 truncate">
+            <span className="opacity-90">{careActionLabel(event.action_type)}</span>
+            <span className="mx-0.5 opacity-50">·</span>
+            <span className="font-normal opacity-95">{event.plant_name}</span>
+          </span>
+        </span>
       ) : (
         <>
-          <div>{careActionLabel(event.action_type)}</div>
+          <div className="flex items-center gap-1">
+            <CalendarEventStatusDot status={event.status} size="xs" />
+            <span>{careActionLabel(event.action_type)}</span>
+          </div>
           <div className="truncate font-normal opacity-90">{event.plant_name}</div>
         </>
       )}

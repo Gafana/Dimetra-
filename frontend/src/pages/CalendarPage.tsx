@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { fetchCalendarEvents, type CalendarEvent } from '../api/index.js';
 import { CalendarDayDetail } from '../components/calendar/CalendarDayDetail.js';
 import { CalendarMonthView } from '../components/calendar/CalendarMonthView.js';
+import { CalendarStatusLegend } from '../components/calendar/CalendarStatusLegend.js';
 import { CalendarWeekView } from '../components/calendar/CalendarWeekView.js';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock.js';
 import {
@@ -106,6 +107,8 @@ export function CalendarPage() {
           />
         </div>
       </div>
+
+      <CalendarStatusLegend />
 
       {loading ? (
         <SkeletonBlock className="h-[22rem]" />

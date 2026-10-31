@@ -41,6 +41,8 @@ export type CareActionType = 'watering' | 'feeding' | 'repot';
 
 export type CalendarEventKind = 'scheduled' | 'completed';
 
+export type CalendarEventStatus = 'scheduled' | 'completed' | 'overdue';
+
 export interface CalendarEvent {
   id: string;
   plant_id: string;
@@ -48,6 +50,8 @@ export interface CalendarEvent {
   room_name: string | null;
   action_type: CareActionType;
   event_kind: CalendarEventKind;
+  /** Запланировано / выполнено / просрочено (относительно «сегодня» в TZ пользователя) */
+  status: CalendarEventStatus;
   /** YYYY-MM-DD */
   date: string;
   /** ISO 8601, только для выполненных */

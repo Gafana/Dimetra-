@@ -2,6 +2,7 @@ import type { CalendarEvent } from '../../api/types.js';
 import { groupEventsByDate, WEEKDAY_LABELS } from '../../lib/calendar.js';
 import { todayIsoDate } from '../../lib/dates.js';
 import { CalendarEventChip } from './CalendarEventChip.js';
+import { CalendarEventStatusDot } from './CalendarEventStatusDot.js';
 
 const MAX_VISIBLE = 3;
 
@@ -65,6 +66,13 @@ export function CalendarMonthView({
                   >
                     {Number(dayIso.slice(8, 10))}
                   </span>
+                  {dayEvents.length > 0 ? (
+                    <div className="mb-0.5 flex flex-wrap gap-0.5 px-0.5">
+                      {dayEvents.slice(0, 5).map((event) => (
+                        <CalendarEventStatusDot key={event.id} status={event.status} size="xs" />
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
                     {visible.map((event) => (
                       <CalendarEventChip key={event.id} event={event} compact />
