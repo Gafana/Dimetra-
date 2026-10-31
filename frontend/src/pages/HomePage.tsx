@@ -18,9 +18,24 @@ import { showTelegramAlert } from '../lib/telegramUi.js';
 type PendingMap = Record<string, PlantCareAction | 'repot' | undefined>;
 
 function mergePlantIntoRooms(rooms: RoomWithPlants[], updatedPlant: UserPlant): RoomWithPlants[] {
+  const cleared = rooms.map((room) => ({
+    ...room,
+    plants: room.plants.filter((plant) => plant.id !== updatedPlant.id),
+  }));
+  if (!updatedPlant.room_id) {
+    return cleared;
+  }
+  return cleared.map((room) =>
+    room.id === updatedPlant.room_id
+      ? { ...room, plants: [...room.plants, updatedPlant] }
+      : room,
+  );
+}
+
+function removePlantFromRooms(rooms: RoomWithPlants[], plantId: string): RoomWithPlants[] {
   return rooms.map((room) => ({
     ...room,
-    plants: room.plants.map((plant) => (plant.id === updatedPlant.id ? updatedPlant : plant)),
+    plants: room.plants.filter((plant) => plant.id !== plantId),
   }));
 }
 
@@ -95,21 +110,17 @@ export function HomePage() {
 
   return (
     <section className="space-y-5">
-      <GlassPanel strong className="relative overflow-hidden p-5">
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-sage-400/15 blur-2xl" />
-        <p className="font-serif text-2xl leading-tight text-sage-100">Bring Greenery to Life</p>
-        <p className="mt-1 max-w-[16rem] text-sm text-sage-300/90">
-          Следите за поливом и подкормкой растений в каждой комнате.
-        </p>
-        {rooms.length === 0 ? (
+      {rooms.length === 0 ? (
+        <GlassPanel className="p-5 text-sm text-sage-300/90">
+          <p>Пока нет комнат с растениями.</p>
           <Link
             to="/add-plant"
             className="btn-primary mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold"
           >
             Добавить первое растение
           </Link>
-        ) : null}
-      </GlassPanel>
+        </GlassPanel>
+      ) : null}
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sage-400/70" />
@@ -162,6 +173,9 @@ export function HomePage() {
                   pendingAction={pending[plant.id] ?? null}
                   onPlantUpdate={(updated) =>
                     setRooms((prev) => mergePlantIntoRooms(prev, updated))
+                  }
+                  onPlantDelete={(plantId) =>
+                    setRooms((prev) => removePlantFromRooms(prev, plantId))
                   }
                   onWater={(id) =>
                     void runPlantMutation(id, 'watering', () => performPlantAction(id, 'watering'))

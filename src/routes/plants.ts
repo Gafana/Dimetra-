@@ -5,14 +5,17 @@ import {
   createPlantBodySchema,
   plantActionBodySchema,
   plantIdParamSchema,
+  updatePlantBodySchema,
   updatePlantPhotoBodySchema,
   updatePlantScheduleBodySchema,
 } from '../schemas/validation.js';
 import {
   createPlant,
+  deletePlant,
   listPlantCareHistory,
   recordPlantAction,
   recordRepot,
+  updatePlant,
   updatePlantPhoto,
   updatePlantSchedule,
 } from '../services/plantsService.js';
@@ -37,6 +40,36 @@ plantsRouter.get(
       const telegramChatId = requireTelegramChatId(req);
       const { id } = req.params as { id: string };
       res.json(await listPlantCareHistory(telegramChatId, id));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+plantsRouter.patch(
+  '/:id',
+  validateParams(plantIdParamSchema),
+  validateBody(updatePlantBodySchema),
+  async (req, res, next) => {
+    try {
+      const telegramChatId = requireTelegramChatId(req);
+      const { id } = req.params as { id: string };
+      res.json(await updatePlant(telegramChatId, id, req.body));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+plantsRouter.delete(
+  '/:id',
+  validateParams(plantIdParamSchema),
+  async (req, res, next) => {
+    try {
+      const telegramChatId = requireTelegramChatId(req);
+      const { id } = req.params as { id: string };
+      await deletePlant(telegramChatId, id);
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

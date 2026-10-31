@@ -133,6 +133,54 @@ export async function updatePlantPhoto(
   return getPlantOrThrow(telegramChatId, plantId);
 }
 
+export interface UpdatePlantInput {
+  custom_name?: string;
+  room_id?: string | null;
+  current_season?: Season;
+  next_watering_date?: string | null;
+  next_feeding_date?: string | null;
+}
+
+export async function updatePlant(
+  telegramChatId: string,
+  plantId: string,
+  input: UpdatePlantInput,
+): Promise<UserPlantRow> {
+  const plant = await getPlantOrThrow(telegramChatId, plantId);
+
+  if (input.room_id !== undefined && input.room_id !== null) {
+    if (!(await roomExists(telegramChatId, input.room_id))) {
+      throw new HttpError('Room not found', 404);
+    }
+  }
+
+  const customName = input.custom_name ?? plant.custom_name;
+  const roomId = input.room_id !== undefined ? input.room_id : plant.room_id;
+  const season = input.current_season ?? plant.current_season;
+  const nextWatering =
+    input.next_watering_date !== undefined ? input.next_watering_date : plant.next_watering_date;
+  const nextFeeding =
+    input.next_feeding_date !== undefined ? input.next_feeding_date : plant.next_feeding_date;
+
+  await execute(
+    `UPDATE user_plants
+     SET custom_name = $1, room_id = $2, current_season = $3,
+         next_watering_date = $4, next_feeding_date = $5
+     WHERE id = $6 AND telegram_chat_id = $7`,
+    [customName, roomId, season, nextWatering, nextFeeding, plantId, telegramChatId],
+  );
+
+  return getPlantOrThrow(telegramChatId, plantId);
+}
+
+export async function deletePlant(telegramChatId: string, plantId: string): Promise<void> {
+  await getPlantOrThrow(telegramChatId, plantId);
+  await execute(`DELETE FROM user_plants WHERE id = $1 AND telegram_chat_id = $2`, [
+    plantId,
+    telegramChatId,
+  ]);
+}
+
 export async function listPlantCareHistory(
   telegramChatId: string,
   plantId: string,

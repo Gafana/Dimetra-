@@ -126,6 +126,14 @@ export function AddPlantPage() {
     };
   }, [catalogId]);
 
+  useEffect(() => {
+    if (!catalogId) return;
+    const entry = pickerItems.find((item) => item.id === catalogId);
+    if (entry) {
+      setCustomName(entry.name);
+    }
+  }, [catalogId, pickerItems]);
+
   const queryActive = catalogQuery.trim().length > 0;
 
   const matchCount = useMemo(() => {

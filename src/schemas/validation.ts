@@ -70,6 +70,24 @@ export const updatePlantScheduleBodySchema = z
     'At least one date field is required',
   );
 
+export const updatePlantBodySchema = z
+  .object({
+    custom_name: z.string().trim().min(1).max(200).optional(),
+    room_id: z.string().uuid().nullable().optional(),
+    current_season: seasonSchema.optional(),
+    next_watering_date: isoDateField.optional(),
+    next_feeding_date: isoDateField.optional(),
+  })
+  .refine(
+    (body) =>
+      body.custom_name !== undefined ||
+      body.room_id !== undefined ||
+      body.current_season !== undefined ||
+      body.next_watering_date !== undefined ||
+      body.next_feeding_date !== undefined,
+    'At least one field is required',
+  );
+
 export const updatePlantPhotoBodySchema = z.object({
   photo_url: z
     .string()
