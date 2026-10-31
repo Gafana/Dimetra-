@@ -66,9 +66,13 @@
    | `BOT_TOKEN` | Токен от [@BotFather](https://t.me/BotFather) |
    | `DATABASE_URL` | Строка из Neon/Supabase |
    | `WEB_APP_URL` | HTTPS URL фронта (после деплоя Vercel), напр. `https://dimetra.vercel.app` |
-   | `TZ` | `Europe/Moscow` (уведомления по локальному времени) |
    | `PROMO_CODE_PEPPER` | Секрет HMAC для промокодов, не короче 16 символов |
-   | `PROMO_ADMIN_IDS` | Telegram ID админов через запятую (команда `/promo`) |
+   | `PROMO_ADMIN_IDS` | Telegram ID админов через запятую (команды `/promo`, `/testnotify`) |
+   | `KEEPALIVE_URL` | *(опционально)* публичный URL сервиса без `/health`, если не используете авто-`RENDER_EXTERNAL_URL` |
+
+   Render автоматически задаёт **`RENDER_EXTERNAL_URL`** (например `https://dimetra-api.onrender.com`) — бэкенд раз в 10 минут пингует **`/health`**, чтобы реже засыпать между внешними запросами.
+
+   **`TZ`** на сервере больше **не влияет** на уведомления: у каждого пользователя свой IANA-пояс в Mini App (`user_settings.timezone`, по умолчанию `Europe/Moscow`).
 
    Render сам задаёт **`PORT`** — в коде: `process.env.PORT || 3000`.
 
@@ -79,8 +83,10 @@
 
 ### Важно про Render Free
 
-- Сервис **засыпает** после ~15 мин без HTTP-трафика.
-- **Long polling бота** держит процесс активным, пока Telegram шлёт updates; при сбоях возможны задержки `/start`.
+- Сервис **засыпает** после ~15 мин без HTTP-трафика; **long polling** и cron уведомлений в спящем процессе **не работают**.
+- Бэкенд сам пингует **`GET /health`** каждые 10 мин (`RENDER_EXTERNAL_URL` или `KEEPALIVE_URL`), но **проснуть уже спящий** инстанс может только **внешний** HTTP-запрос.
+- Настройте **GitHub Actions** workflow **`.github/workflows/keepalive.yml`**: в репозитории GitHub задайте **Variable** или **Secret** `KEEPALIVE_URL` = `https://ВАШ-СЕРВIS.onrender.com` (без `/health`). Workflow дергает `/health` каждые 10 минут.
+- Локально при `LOCAL_DEV=true` self-ping отключён.
 - Для 24/7 без пауз нужен **paid** instance или другой хостинг (Fly.io, Railway и т.д.).
 
 ---
@@ -146,7 +152,8 @@ npm run dev:frontend # фронт
 
 | Где | Переменные |
 |-----|------------|
-| **Render** | `BOT_TOKEN`, `DATABASE_URL`, `WEB_APP_URL`, `TZ`, `PROMO_CODE_PEPPER`, `PROMO_ADMIN_IDS` (+ автоматически `PORT`) |
+| **Render** | `BOT_TOKEN`, `DATABASE_URL`, `WEB_APP_URL`, `PROMO_CODE_PEPPER`, `PROMO_ADMIN_IDS` (+ автоматически `PORT`, `RENDER_EXTERNAL_URL`) |
+| **GitHub** (keepalive) | **Variable** или **Secret** `KEEPALIVE_URL` = публичный URL Render |
 | **Vercel / Netlify** | `VITE_API_URL` |
 | **Neon / Supabase** | строка → только в Render как `DATABASE_URL` |
 

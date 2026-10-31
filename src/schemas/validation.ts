@@ -30,11 +30,26 @@ export const plantActionBodySchema = z.object({
   action_type: z.enum(['watering', 'feeding']),
 });
 
-export const updateSettingsBodySchema = z.object({
-  notification_time: z
-    .string()
-    .regex(/^\d{2}:\d{2}:\d{2}$/, 'notification_time must be HH:MM:SS'),
-});
+import { isValidIanaTimeZone } from '../lib/time.js';
+
+export const updateSettingsBodySchema = z
+  .object({
+    notification_time: z
+      .string()
+      .regex(/^\d{2}:\d{2}:\d{2}$/, 'notification_time must be HH:MM:SS')
+      .optional(),
+    timezone: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .refine((value) => isValidIanaTimeZone(value), 'timezone must be a valid IANA name')
+      .optional(),
+  })
+  .refine(
+    (body) => body.notification_time !== undefined || body.timezone !== undefined,
+    'At least one of notification_time or timezone is required',
+  );
 
 export const plantIdParamSchema = z.object({
   id: z.string().uuid(),

@@ -138,11 +138,16 @@ export async function fetchSettings(): Promise<UserSettings> {
   return data;
 }
 
-export async function updateNotificationTime(notificationTime: string): Promise<UserSettings> {
-  const { data } = await apiClient.put<UserSettings>('/api/settings', {
-    notification_time: notificationTime,
-  });
+export async function updateSettings(patch: {
+  notification_time?: string;
+  timezone?: string;
+}): Promise<UserSettings> {
+  const { data } = await apiClient.put<UserSettings>('/api/settings', patch);
   return data;
+}
+
+export async function updateNotificationTime(notificationTime: string): Promise<UserSettings> {
+  return updateSettings({ notification_time: notificationTime });
 }
 
 export { apiClient, getApiBaseUrl } from './client.js';

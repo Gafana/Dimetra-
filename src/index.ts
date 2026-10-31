@@ -2,6 +2,7 @@ import './loadEnv.js';
 import type { Telegraf } from 'telegraf';
 import { clearBotInstance, createBot } from './bot.js';
 import { closeDb, initDb } from './db/initDb.js';
+import { startKeepalivePing, stopKeepalivePing } from './lib/keepalive.js';
 import { startNotificationScheduler, stopNotificationScheduler } from './lib/scheduler.js';
 import { createApp } from './server.js';
 
@@ -15,6 +16,7 @@ async function main(): Promise<void> {
 
   const server = app.listen(PORT, () => {
     console.log(`HTTP server listening on port ${PORT}`);
+    startKeepalivePing();
   });
 
   const skipBotForLocalDev = process.env.LOCAL_DEV === 'true';
@@ -39,6 +41,7 @@ async function main(): Promise<void> {
     console.log(`Received ${signal}, shutting down...`);
 
     stopNotificationScheduler();
+    stopKeepalivePing();
 
     bot?.stop(signal);
     clearBotInstance();

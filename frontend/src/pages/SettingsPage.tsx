@@ -1,7 +1,7 @@
-import { Bell, Home, Lock } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Bell, Globe, Home, Lock } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { fetchSettings, updateNotificationTime } from '../api/index.js';
+import { fetchSettings, updateSettings } from '../api/index.js';
 import { RoomsSettingsPanel } from '../components/settings/RoomsSettingsPanel.js';
 import { GlassPanel } from '../components/ui/GlassPanel.js';
 import { PageLoader } from '../components/ui/PageLoader.js';
@@ -10,6 +10,11 @@ import {
   notificationTimeToInputValue,
 } from '../lib/dates.js';
 import { getApiErrorMessage } from '../lib/apiError.js';
+import {
+  detectUserTimeZone,
+  formatTimeZoneLabel,
+  listSupportedTimeZones,
+} from '../lib/timezone.js';
 import { getTelegramWebApp, showTelegramAlert, showTelegramPopup } from '../lib/telegramUi.js';
 
 type SettingsSection = 'notifications' | 'rooms';
@@ -24,7 +29,11 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [timeValue, setTimeValue] = useState('09:00');
   const [initialTimeValue, setInitialTimeValue] = useState('09:00');
+  const [timezoneValue, setTimezoneValue] = useState('Europe/Moscow');
+  const [initialTimezoneValue, setInitialTimezoneValue] = useState('Europe/Moscow');
   const [saving, setSaving] = useState(false);
+
+  const timeZoneOptions = useMemo(() => listSupportedTimeZones(), []);
 
   const saveHandlerRef = useRef<() => void>(() => undefined);
 
@@ -32,9 +41,19 @@ export function SettingsPage() {
     setLoading(true);
     try {
       const settings = await fetchSettings();
+      const detected = detectUserTimeZone();
+      let timezone = settings.timezone || detected;
+
+      if (timezone === 'Europe/Moscow' && detected !== 'Europe/Moscow') {
+        const synced = await updateSettings({ timezone: detected });
+        timezone = synced.timezone;
+      }
+
       const inputValue = notificationTimeToInputValue(settings.notification_time);
       setTimeValue(inputValue);
       setInitialTimeValue(inputValue);
+      setTimezoneValue(timezone);
+      setInitialTimezoneValue(timezone);
     } catch (error) {
       showTelegramAlert(getApiErrorMessage(error, 'Не удалось загрузить настройки'));
     } finally {
@@ -55,22 +74,27 @@ export function SettingsPage() {
 
     try {
       const notificationTime = inputValueToNotificationTime(timeValue);
-      await updateNotificationTime(notificationTime);
+      const updated = await updateSettings({
+        notification_time: notificationTime,
+        timezone: timezoneValue,
+      });
       setInitialTimeValue(timeValue);
-      showTelegramPopup('Время уведомлений сохранено', 'Готово');
+      setInitialTimezoneValue(updated.timezone);
+      setTimezoneValue(updated.timezone);
+      showTelegramPopup('Настройки уведомлений сохранены', 'Готово');
     } catch (error) {
       showTelegramAlert(getApiErrorMessage(error, 'Не удалось сохранить настройки'));
     } finally {
       setSaving(false);
       webApp?.MainButton.hideProgress();
     }
-  }, [saving, timeValue]);
+  }, [saving, timeValue, timezoneValue]);
 
   saveHandlerRef.current = () => {
     void saveSettings();
   };
 
-  const hasChanges = timeValue !== initialTimeValue;
+  const hasChanges = timeValue !== initialTimeValue || timezoneValue !== initialTimezoneValue;
 
   useEffect(() => {
     const webApp = getTelegramWebApp();
@@ -128,11 +152,38 @@ export function SettingsPage() {
             <GlassPanel strong className="space-y-4 p-5">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage-400/15 ring-1 ring-white/10">
+                  <Globe className="h-5 w-5 text-sage-300" strokeWidth={1.75} />
+                </span>
+                <div>
+                  <p className="font-medium text-sage-100">Часовой пояс</p>
+                  <p className="text-xs text-sage-400/80">Уведомления по вашему локальному времени</p>
+                </div>
+              </div>
+
+              <select
+                value={timezoneValue}
+                onChange={(event) => setTimezoneValue(event.target.value)}
+                className="input-glass w-full rounded-2xl px-4 py-3 text-sm"
+              >
+                {!timeZoneOptions.includes(timezoneValue) ? (
+                  <option value={timezoneValue}>{formatTimeZoneLabel(timezoneValue)}</option>
+                ) : null}
+                {timeZoneOptions.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {formatTimeZoneLabel(zone)}
+                  </option>
+                ))}
+              </select>
+            </GlassPanel>
+
+            <GlassPanel strong className="space-y-4 p-5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage-400/15 ring-1 ring-white/10">
                   <Bell className="h-5 w-5 text-sage-300" strokeWidth={1.75} />
                 </span>
                 <div>
                   <p className="font-medium text-sage-100">Время уведомлений</p>
-                  <p className="text-xs text-sage-400/80">Формат на сервере: HH:MM:SS</p>
+                  <p className="text-xs text-sage-400/80">В вашем часовом поясе: HH:MM</p>
                 </div>
               </div>
 
@@ -144,7 +195,7 @@ export function SettingsPage() {
               />
 
               <p className="text-xs text-sage-400/75">
-                Сейчас будет отправлено: {inputValueToNotificationTime(timeValue)}
+                Будет отправлено в {inputValueToNotificationTime(timeValue)} ({timezoneValue})
               </p>
             </GlassPanel>
 
@@ -159,7 +210,7 @@ export function SettingsPage() {
               </button>
             ) : (
               <p className="text-center text-xs text-sage-400/75">
-                Измените время — появится кнопка Telegram «Сохранить».
+                Измените настройки — появится кнопка Telegram «Сохранить».
               </p>
             )}
           </>
