@@ -167,6 +167,8 @@ npm run dev:frontend # фронт
 | CORS | Бэкенд: `cors()` открытый; origin фронта должен быть HTTPS |
 | Бот молчит | Render logs, `BOT_TOKEN`, регион EU/US |
 | Пустая БД после деплоя | Другая `DATABASE_URL` или новый проект Neon |
+| Vercel собирает старый commit (напр. `dd2f9ff`) | **Deployments** → последний деплой должен быть `40e016b` или новее. **Settings → Git**: repo `Gafana/Dimetra-`, branch `main`, Root Directory `frontend`. **Redeploy** → *Redeploy with existing Build Cache* выкл. Проверка сборки: ~2130 modules, CSS ~40 kB (старый фронт ~2110 / ~24 kB). |
+| Mini App без изменений после деплоя | Полностью закройте Mini App в Telegram и откройте снова (кэш WebView). |
 
 ---
 
