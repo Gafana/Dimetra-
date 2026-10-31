@@ -18,3 +18,7 @@ services:
         sync: false
       - key: TZ
         value: Europe/Moscow
+      - key: PROMO_CODE_PEPPER
+        sync: false
+      - key: PROMO_ADMIN_IDS
+        sync: false

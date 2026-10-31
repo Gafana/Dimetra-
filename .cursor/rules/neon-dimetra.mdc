@@ -20,7 +20,7 @@ Prefer the **Neon CLI** over MCP when it is installed and authenticated.
 ## This repo
 
 - **Connection:** `DATABASE_URL` (Neon **pooled** string). Loaded from `.env`, then `.env.local` (`src/loadEnv.ts`).
-- **Schema:** `src/db/schema.ts` — applied on every backend start via `initDb()` in `src/db/initDb.ts`.
+- **Schema:** `src/db/schema.ts` and `src/db/migrations/` — applied on every backend start via `initDb()` in `src/db/initDb.ts`.
 - **Driver:** `pg` pool in `src/db/pool.ts` — not SQLite.
 - **Do not** commit `.env.local`, `.neon`, or API keys.
 

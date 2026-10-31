@@ -11,6 +11,7 @@ import type {
   UserPlant,
   UpsertPlantCatalogPayload,
   UserSettings,
+  AccessStatus,
 } from './types.js';
 
 export async function fetchCalendarEvents(from: string, to: string): Promise<CalendarEvent[]> {
@@ -124,6 +125,11 @@ export async function updatePlantPhoto(
 
 export async function fetchPlantCareHistory(plantId: string): Promise<CareHistoryEntry[]> {
   const { data } = await apiClient.get<CareHistoryEntry[]>(`/api/plants/${plantId}/history`);
+  return data;
+}
+
+export async function fetchAccessStatus(): Promise<AccessStatus> {
+  const { data } = await apiClient.get<AccessStatus>('/api/access');
   return data;
 }
 

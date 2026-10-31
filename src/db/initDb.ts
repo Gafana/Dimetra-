@@ -1,3 +1,4 @@
+import { markAppliedMigrations } from './migrate.js';
 import { createPool, execute, getPool, hasPool, setPool } from './pool.js';
 import { seedPlantCatalogIfEmpty } from './seedPlantCatalog.js';
 import { SCHEMA_STATEMENTS } from './schema.js';
@@ -34,10 +35,11 @@ export async function initDb(connectionString?: string): Promise<void> {
 
   await getPool().query('SELECT 1');
   await runSchemaMigrations();
+  await markAppliedMigrations();
   await seedPlantCatalogIfEmpty();
 
   console.log(
-    'PostgreSQL connected; tables ready: rooms, user_plants, care_history, user_settings, plant_catalog',
+    'PostgreSQL connected; tables ready: rooms, user_plants, care_history, user_settings, plant_catalog, promo_codes, promo_code_activations',
   );
 }
 

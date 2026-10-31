@@ -128,3 +128,7 @@ export interface UserSettings {
   telegram_chat_id: string;
   notification_time: string;
 }
+
+export interface AccessStatus {
+  admitted: boolean;
+}
