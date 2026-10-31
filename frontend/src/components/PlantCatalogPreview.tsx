@@ -1,11 +1,10 @@
 import type { PlantCatalogEntry } from '../api/types.js';
 import { GlassPanel } from './ui/GlassPanel.js';
 
+/** Компактная карточка вида для экрана «Добавить» (без блоков энциклопедии). */
 export function PlantCatalogPreview({ entry }: { entry: PlantCatalogEntry }) {
-  const e = entry.encyclopedia;
-
   return (
-    <GlassPanel className="space-y-3 p-4">
+    <GlassPanel className="p-4">
       <div className="flex gap-3">
         {entry.imageUrl ? (
           <img
@@ -25,40 +24,6 @@ export function PlantCatalogPreview({ entry }: { entry: PlantCatalogEntry }) {
           </p>
         </div>
       </div>
-
-      {e ? (
-        <dl className="grid gap-2 text-xs text-sage-300/90">
-          {e.light ? (
-            <div>
-              <dt className="font-medium text-sage-200">Свет</dt>
-              <dd className="mt-0.5 leading-snug">{e.light}</dd>
-            </div>
-          ) : null}
-          {e.watering ? (
-            <div>
-              <dt className="font-medium text-sage-200">Полив</dt>
-              <dd className="mt-0.5 leading-snug line-clamp-4">{e.watering}</dd>
-            </div>
-          ) : null}
-          {e.feeding ? (
-            <div>
-              <dt className="font-medium text-sage-200">Подкормка</dt>
-              <dd className="mt-0.5 leading-snug line-clamp-3">{e.feeding}</dd>
-            </div>
-          ) : null}
-        </dl>
-      ) : null}
-
-      {entry.sourceUrl ? (
-        <a
-          href={entry.sourceUrl}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="inline-block text-[11px] text-sage-400 underline decoration-sage-500/40"
-        >
-          Источник: FloralWorld
-        </a>
-      ) : null}
     </GlassPanel>
   );
 }
