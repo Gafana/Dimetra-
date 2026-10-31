@@ -35,7 +35,7 @@ After pulling env, **enable the Neon MCP server in Cursor** (Settings → MCP) a
 ### Backend database rules
 
 1. Use **`DATABASE_URL`** only (no local SQLite).
-2. On startup, `initDb()` ensures tables: `rooms`, `user_plants`, `care_history`, `user_settings`.
+2. On startup, `initDb()` ensures tables: `rooms`, `user_plants`, `care_history`, `user_settings`, `plant_catalog`, `promo_codes`, `promo_code_activations` (migration `001_promo_codes`).
 3. Use **pooled** `DATABASE_URL` for the Express app; use `DATABASE_URL_UNPOOLED` only for one-off migrations/dumps if needed.
 4. Region for this project: **Frankfurt** (`aws-eu-central-1`) when creating new Neon resources.
 

@@ -67,6 +67,8 @@
    | `DATABASE_URL` | Строка из Neon/Supabase |
    | `WEB_APP_URL` | HTTPS URL фронта (после деплоя Vercel), напр. `https://dimetra.vercel.app` |
    | `TZ` | `Europe/Moscow` (уведомления по локальному времени) |
+   | `PROMO_CODE_PEPPER` | Секрет HMAC для промокодов, не короче 16 символов |
+   | `PROMO_ADMIN_IDS` | Telegram ID админов через запятую (команда `/promo`) |
 
    Render сам задаёт **`PORT`** — в коде: `process.env.PORT || 3000`.
 
@@ -144,7 +146,7 @@ npm run dev:frontend # фронт
 
 | Где | Переменные |
 |-----|------------|
-| **Render** | `BOT_TOKEN`, `DATABASE_URL`, `WEB_APP_URL`, `TZ` (+ автоматически `PORT`) |
+| **Render** | `BOT_TOKEN`, `DATABASE_URL`, `WEB_APP_URL`, `TZ`, `PROMO_CODE_PEPPER`, `PROMO_ADMIN_IDS` (+ автоматически `PORT`) |
 | **Vercel / Netlify** | `VITE_API_URL` |
 | **Neon / Supabase** | строка → только в Render как `DATABASE_URL` |
 

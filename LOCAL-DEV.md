@@ -26,9 +26,10 @@ npm run dev:local
 | Фронт | Telegram WebApp | `VITE_LOCAL_DEV=true` → мок `window.Telegram.WebApp` |
 | БД | Neon `DATABASE_URL` | тот же Neon (отдельный `LOCAL_DEV_CHAT_ID`) |
 | Бот | long polling на Render | локально **не стартует**, если `LOCAL_DEV=true` |
+| Промокод | личка бота и `GET /api/access` | `LOCAL_DEV=true` пропускает проверку, Mini App открывается сразу |
 | Удаление из энциклопедии | недоступно (403) | кнопка и `DELETE /api/encyclopedia/:id` |
 
-Файлы **`auth.ts`**, **`loadEnv.ts`**, **`pool.ts`**, **`vite.config.ts`** для этого режима не меняются.
+Локальный вход по-прежнему идёт через `localDevAuth.ts` и заголовок `X-Local-Dev-Chat-Id`. При `LOCAL_DEV=true` промокод не спрашивается.
 
 ## Переменные
 

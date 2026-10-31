@@ -1,4 +1,6 @@
-/** DDL for Dimetra — applied on startup via initDb(). */
+import { PROMO_MIGRATION_STATEMENTS } from './migrations/001_promo_codes.js';
+
+/** DDL for Dimetra — applied on startup via initDb(). Promo DDL is migration 001_promo_codes. */
 export const SCHEMA_STATEMENTS: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS rooms (
     id TEXT PRIMARY KEY NOT NULL,
@@ -59,4 +61,5 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_plant_catalog_name ON plant_catalog (name)`,
   `ALTER TABLE user_plants ADD COLUMN IF NOT EXISTS photo_url TEXT`,
+  ...PROMO_MIGRATION_STATEMENTS,
 ];

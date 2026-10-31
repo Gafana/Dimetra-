@@ -57,3 +57,20 @@ export async function queryOne<T extends pg.QueryResultRow = pg.QueryResultRow>(
 export async function execute(text: string, params: unknown[] = []): Promise<void> {
   await getPool().query(text, params);
 }
+
+export async function withTransaction<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    try {
+      const result = await fn(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+  } finally {
+    client.release();
+  }
+}
