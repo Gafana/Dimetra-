@@ -1,10 +1,8 @@
-import { addDaysToIsoDate } from '../lib/dates.js';
 import { query } from '../db/pool.js';
+import { calendarEventStatus, nextRepotIsoDate } from '../lib/plantCareStatus.js';
 import { todayIsoDateInTimeZone } from '../lib/time.js';
 import { ensureSettingsForChat } from './settingsService.js';
-import type { CalendarEvent, CalendarEventStatus, CareActionType } from '../types/models.js';
-
-const REPOT_INTERVAL_DAYS = 365;
+import type { CalendarEvent, CareActionType } from '../types/models.js';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -32,20 +30,6 @@ interface HistoryCalendarRow {
 
 function historyDateFromDoneAt(doneAt: string): string {
   return doneAt.slice(0, 10);
-}
-
-function calendarEventStatus(
-  eventKind: CalendarEvent['event_kind'],
-  date: string,
-  todayIso: string,
-): CalendarEventStatus {
-  if (eventKind === 'completed') {
-    return 'completed';
-  }
-  if (date < todayIso) {
-    return 'overdue';
-  }
-  return 'scheduled';
 }
 
 function pushScheduled(
@@ -99,7 +83,7 @@ export async function listCalendarEvents(
     pushScheduled(events, plant, 'watering', plant.next_watering_date, from, to, todayIso);
     pushScheduled(events, plant, 'feeding', plant.next_feeding_date, from, to, todayIso);
     if (plant.last_repot_date) {
-      const nextRepot = addDaysToIsoDate(plant.last_repot_date, REPOT_INTERVAL_DAYS);
+      const nextRepot = nextRepotIsoDate(plant.last_repot_date);
       pushScheduled(events, plant, 'repot', nextRepot, from, to, todayIso);
     }
   }

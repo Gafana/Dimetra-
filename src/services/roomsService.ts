@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { execute, query, queryOne } from '../db/pool.js';
 import { HttpError } from '../lib/errors.js';
 import type { RoomRow, RoomWithPlants, UserPlantRow } from '../types/models.js';
+import { attachCareStatusToPlants } from './plantCareStatusService.js';
 
 export async function listRoomsWithPlants(telegramChatId: string): Promise<RoomWithPlants[]> {
   const rooms = await query<{ id: string; name: string }>(
@@ -36,9 +37,15 @@ export async function listRoomsWithPlants(telegramChatId: string): Promise<RoomW
     plantsByRoom.set(plant.room_id, list);
   }
 
+  const enrichedById = new Map(
+    (await attachCareStatusToPlants(telegramChatId, plants)).map((plant) => [plant.id, plant]),
+  );
+
   return rooms.map((room) => ({
     ...room,
-    plants: plantsByRoom.get(room.id) ?? [],
+    plants: (plantsByRoom.get(room.id) ?? [])
+      .map((plant) => enrichedById.get(plant.id)!)
+      .filter(Boolean),
   }));
 }
 

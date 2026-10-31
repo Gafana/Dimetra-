@@ -4,7 +4,8 @@ import { addDaysToIsoDate, nowIsoDateTime, todayIsoDate } from '../lib/dates.js'
 import { execute, query, queryOne } from '../db/pool.js';
 import type { Season } from '../db/catalog.js';
 import { HttpError } from '../lib/errors.js';
-import type { CareActionType, CareHistoryRow, UserPlantRow } from '../types/models.js';
+import type { CareActionType, CareHistoryRow, UserPlantRow, UserPlantWithCareStatus } from '../types/models.js';
+import { attachCareStatusToPlant } from './plantCareStatusService.js';
 
 const PLANT_COLUMNS = `id, custom_name, room_id, catalog_id, last_repot_date, current_season,
             next_watering_date, next_feeding_date, photo_url, created_at`;
@@ -32,6 +33,20 @@ async function getPlantOrThrow(telegramChatId: string, plantId: string): Promise
   return plant;
 }
 
+async function getPlantResponse(
+  telegramChatId: string,
+  plantId: string,
+): Promise<UserPlantWithCareStatus> {
+  return attachCareStatusToPlant(telegramChatId, await getPlantOrThrow(telegramChatId, plantId));
+}
+
+async function attachCareStatus(
+  telegramChatId: string,
+  plant: UserPlantRow,
+): Promise<UserPlantWithCareStatus> {
+  return attachCareStatusToPlant(telegramChatId, plant);
+}
+
 async function insertCareHistory(
   plantId: string,
   actionType: CareActionType,
@@ -47,7 +62,7 @@ async function insertCareHistory(
 export async function createPlant(
   telegramChatId: string,
   input: CreatePlantInput,
-): Promise<UserPlantRow> {
+): Promise<UserPlantWithCareStatus> {
   if (!(await findCatalogPlant(input.catalog_id))) {
     throw new HttpError(`Unknown catalog_id: ${input.catalog_id}`, 400);
   }
@@ -91,7 +106,7 @@ export async function createPlant(
     ],
   );
 
-  return getPlantOrThrow(telegramChatId, plant.id);
+  return getPlantResponse(telegramChatId, plant.id);
 }
 
 export interface UpdatePlantScheduleInput {
@@ -103,7 +118,7 @@ export async function updatePlantSchedule(
   telegramChatId: string,
   plantId: string,
   input: UpdatePlantScheduleInput,
-): Promise<UserPlantRow> {
+): Promise<UserPlantWithCareStatus> {
   const plant = await getPlantOrThrow(telegramChatId, plantId);
   const nextWatering =
     input.next_watering_date !== undefined ? input.next_watering_date : plant.next_watering_date;
@@ -117,20 +132,20 @@ export async function updatePlantSchedule(
     [nextWatering, nextFeeding, plantId, telegramChatId],
   );
 
-  return getPlantOrThrow(telegramChatId, plantId);
+  return getPlantResponse(telegramChatId, plantId);
 }
 
 export async function updatePlantPhoto(
   telegramChatId: string,
   plantId: string,
   photoUrl: string | null,
-): Promise<UserPlantRow> {
+): Promise<UserPlantWithCareStatus> {
   await getPlantOrThrow(telegramChatId, plantId);
   await execute(
     `UPDATE user_plants SET photo_url = $1 WHERE id = $2 AND telegram_chat_id = $3`,
     [photoUrl, plantId, telegramChatId],
   );
-  return getPlantOrThrow(telegramChatId, plantId);
+  return getPlantResponse(telegramChatId, plantId);
 }
 
 export async function listPlantCareHistory(
@@ -151,7 +166,7 @@ export async function recordPlantAction(
   telegramChatId: string,
   plantId: string,
   actionType: 'watering' | 'feeding',
-): Promise<UserPlantRow> {
+): Promise<UserPlantWithCareStatus> {
   const plant = await getPlantOrThrow(telegramChatId, plantId);
   const intervals = await getCareIntervals(plant.catalog_id, plant.current_season);
   const doneDate = todayIsoDate();
@@ -164,7 +179,7 @@ export async function recordPlantAction(
       `UPDATE user_plants SET next_watering_date = $1 WHERE id = $2 AND telegram_chat_id = $3`,
       [nextWatering, plantId, telegramChatId],
     );
-    return { ...plant, next_watering_date: nextWatering };
+    return attachCareStatus(telegramChatId, { ...plant, next_watering_date: nextWatering });
   }
 
   const nextFeeding = addDaysToIsoDate(doneDate, intervals.feedingDays);
@@ -172,10 +187,13 @@ export async function recordPlantAction(
     `UPDATE user_plants SET next_feeding_date = $1 WHERE id = $2 AND telegram_chat_id = $3`,
     [nextFeeding, plantId, telegramChatId],
   );
-  return { ...plant, next_feeding_date: nextFeeding };
+  return attachCareStatus(telegramChatId, { ...plant, next_feeding_date: nextFeeding });
 }
 
-export async function recordRepot(telegramChatId: string, plantId: string): Promise<UserPlantRow> {
+export async function recordRepot(
+  telegramChatId: string,
+  plantId: string,
+): Promise<UserPlantWithCareStatus> {
   const plant = await getPlantOrThrow(telegramChatId, plantId);
   const repotDate = todayIsoDate();
 
@@ -186,5 +204,5 @@ export async function recordRepot(telegramChatId: string, plantId: string): Prom
     [repotDate, plantId, telegramChatId],
   );
 
-  return { ...plant, last_repot_date: repotDate };
+  return attachCareStatus(telegramChatId, { ...plant, last_repot_date: repotDate });
 }

@@ -10,6 +10,7 @@ import { formatDisplayDate, isCareDue, todayIsoDate } from '../lib/dates.js';
 import { compressPlantPhotoFile } from '../lib/compressPlantPhoto.js';
 import { getApiErrorMessage } from '../lib/apiError.js';
 import { showTelegramAlert } from '../lib/telegramUi.js';
+import { PlantCardCareStatusDot } from './PlantCardCareStatusDot.js';
 import { PlantCareHistoryModal } from './PlantCareHistoryModal.js';
 import { GlassPanel } from './ui/GlassPanel.js';
 import { Spinner } from './ui/Spinner.js';
@@ -134,7 +135,10 @@ export function PlantCard({
 
         <div className="space-y-3 p-4">
           <div>
-            <h3 className="font-serif text-xl leading-tight text-sage-100">{plant.custom_name}</h3>
+            <h3 className="flex items-center gap-2 font-serif text-xl leading-tight text-sage-100">
+              <PlantCardCareStatusDot status={plant.care_status} />
+              <span className="min-w-0 truncate">{plant.custom_name}</span>
+            </h3>
             <p className="text-xs text-sage-400/90">
               {plant.current_season === 'summer' ? 'Летний режим' : 'Зимний режим'}
             </p>

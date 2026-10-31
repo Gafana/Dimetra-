@@ -18,6 +18,10 @@ export interface UserPlantRow {
   created_at: string;
 }
 
+export interface UserPlantWithCareStatus extends UserPlantRow {
+  care_status: PlantCareStatus;
+}
+
 export interface CareHistoryRow {
   id: string;
   plant_id: string;
@@ -26,7 +30,7 @@ export interface CareHistoryRow {
 }
 
 export interface RoomWithPlants extends RoomRow {
-  plants: UserPlantRow[];
+  plants: UserPlantWithCareStatus[];
 }
 
 export interface UserSettingsRow {
@@ -38,6 +42,9 @@ export interface UserSettingsRow {
 }
 
 export type CareActionType = 'watering' | 'feeding' | 'repot';
+
+/** Сводка по просрочке запланированного ухода (для списка растений). */
+export type PlantCareStatus = 'ok' | 'overdue';
 
 export type CalendarEventKind = 'scheduled' | 'completed';
 
