@@ -146,6 +146,11 @@ export async function fetchAccessStatus(): Promise<AccessStatus> {
   return data;
 }
 
+/** Пробуждает проверку уведомлений на сервере (после открытия Mini App). */
+export async function nudgeNotificationWake(): Promise<void> {
+  await apiClient.post('/api/notifications/wake');
+}
+
 export async function fetchSettings(): Promise<UserSettings> {
   const { data } = await apiClient.get<UserSettings>('/api/settings');
   return data;

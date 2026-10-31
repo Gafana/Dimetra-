@@ -84,8 +84,9 @@
 ### Важно про Render Free
 
 - Сервис **засыпает** после ~15 мин без HTTP-трафика; **long polling** и cron уведомлений в спящем процессе **не работают**.
-- Бэкенд сам пингует **`GET /health`** каждые 10 мин (`RENDER_EXTERNAL_URL` или `KEEPALIVE_URL`), но **проснуть уже спящий** инстанс может только **внешний** HTTP-запрос.
-- Настройте **GitHub Actions** workflow **`.github/workflows/keepalive.yml`**: в репозитории GitHub задайте **Variable** или **Secret** `KEEPALIVE_URL` = `https://ВАШ-СЕРВIS.onrender.com` (без `/health`). Workflow дергает `/health` каждые 10 минут.
+- Бэкенд сам пингует **`GET /health`** каждые 5 мин (`RENDER_EXTERNAL_URL` или `KEEPALIVE_URL`), но **проснуть уже спящий** инстанс может только **внешний** HTTP-запрос. Ответ **`/health`** также запускает **отложенную проверку уведомлений** (не чаще ~45 с).
+- Настройте **GitHub Actions** workflow **`.github/workflows/keepalive.yml`**: в репозитории GitHub задайте **Variable** или **Secret** `KEEPALIVE_URL` = `https://ВАШ-СЕРVIS.onrender.com` (без `/health`). Workflow дергает `/health` каждые 5 минут.
+- Mini App при входе вызывает **`POST /api/notifications/wake`** — персональная проверка «план на сегодня» и «просрочки», если подошло время из настроек.
 - Локально при `LOCAL_DEV=true` self-ping отключён.
 - Для 24/7 без пауз нужен **paid** instance или другой хостинг (Fly.io, Railway и т.д.).
 

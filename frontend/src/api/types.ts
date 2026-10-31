@@ -14,9 +14,9 @@ export type CareActionType = PlantCareAction | 'repot';
 /** Сводка просрочки запланированного ухода (список растений). */
 export type PlantCareStatus = 'ok' | 'overdue';
 
-export type CalendarEventKind = 'scheduled' | 'completed';
+export type CalendarEventKind = 'scheduled' | 'completed' | 'overdue';
 
-export type CalendarEventStatus = 'scheduled' | 'completed' | 'overdue';
+export type CalendarEventStatus = 'scheduled' | 'completed' | 'overdue' | 'overdue_closed';
 
 export interface CalendarEvent {
   id: string;

@@ -15,7 +15,13 @@ export function careActionLabel(action: CareActionType): string {
 
 export function careEventTitle(action: CareActionType, kind: CalendarEventKind): string {
   const base = careActionLabel(action);
-  return kind === 'completed' ? `${base} ✓` : base;
+  if (kind === 'completed') {
+    return `${base} ✓`;
+  }
+  if (kind === 'overdue') {
+    return base;
+  }
+  return base;
 }
 
 export function careActionTone(action: CareActionType): 'water' | 'feed' | 'repot' {

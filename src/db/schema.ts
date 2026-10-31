@@ -1,5 +1,6 @@
 import { PROMO_MIGRATION_STATEMENTS } from './migrations/001_promo_codes.js';
 import { USER_SETTINGS_TIMEZONE_MIGRATION_STATEMENTS } from './migrations/002_user_settings_timezone.js';
+import { CARE_OBLIGATIONS_MIGRATION_STATEMENTS } from './migrations/003_care_obligations.js';
 
 /** DDL for Dimetra — applied on startup via initDb(). Promo DDL is migration 001_promo_codes. */
 export const SCHEMA_STATEMENTS: readonly string[] = [
@@ -64,4 +65,5 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
   `ALTER TABLE user_plants ADD COLUMN IF NOT EXISTS photo_url TEXT`,
   ...PROMO_MIGRATION_STATEMENTS,
   ...USER_SETTINGS_TIMEZONE_MIGRATION_STATEMENTS,
+  ...CARE_OBLIGATIONS_MIGRATION_STATEMENTS,
 ];
