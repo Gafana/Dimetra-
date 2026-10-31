@@ -8,6 +8,16 @@ export interface TodayPlanItem {
   action_type: 'watering' | 'feeding';
 }
 
+/** Shared with bot reply keyboard labels. */
+export const CARE_BOT_EMOJI = {
+  todayPlan: '📋',
+  overdue: '⏰',
+  dailyPlants: '🪴',
+  overdueReminder: '⚠️',
+} as const;
+
+export const OPEN_DIMETRA_EMOJI = '🌿';
+
 function escapeHtml(text: string): string {
   return text
     .replaceAll('&', '&amp;')
@@ -53,7 +63,7 @@ export function buildTodayPlanMessage(
 ): { text: string; reply_markup?: InlineKeyboardMarkup } {
   if (items.length === 0) {
     return {
-      text: '📋 <b>План на сегодня</b>\n\nНа сегодня нет запланированного полива или подкормки.',
+      text: `${CARE_BOT_EMOJI.todayPlan} <b>План на сегодня</b>\n\nНа сегодня нет запланированного полива или подкормки.`,
     };
   }
 
@@ -63,7 +73,7 @@ export function buildTodayPlanMessage(
   );
 
   return {
-    text: ['📋 <b>План на сегодня</b>', ...lines].join('\n'),
+    text: [`${CARE_BOT_EMOJI.todayPlan} <b>План на сегодня</b>`, ...lines].join('\n'),
     reply_markup: buildActionKeyboard(items),
   };
 }
@@ -73,7 +83,7 @@ export function buildOverdueMessage(
 ): { text: string; reply_markup?: InlineKeyboardMarkup } {
   if (obligations.length === 0) {
     return {
-      text: '⏰ <b>Просрочки</b>\n\nОткрытых просрочек нет — всё актуально.',
+      text: `${CARE_BOT_EMOJI.overdue} <b>Просрочки</b>\n\nОткрытых просрочек нет — всё актуально.`,
     };
   }
 
@@ -90,7 +100,7 @@ export function buildOverdueMessage(
   }));
 
   return {
-    text: ['⏰ <b>Просроченный уход</b>', ...lines].join('\n'),
+    text: [`${CARE_BOT_EMOJI.overdue} <b>Просроченный уход</b>`, ...lines].join('\n'),
     reply_markup: buildActionKeyboard(keyboardItems),
   };
 }
@@ -106,7 +116,7 @@ export function buildDailyTodayNotificationMessage(
       `• ${escapeHtml(item.custom_name)}: ${item.action_type === 'watering' ? 'нужен полив' : 'нужна подкормка'}`,
   );
   return {
-    text: ['🪴 <b>Время позаботиться о растениях!</b>', 'Задачи на сегодня:', ...lines].join('\n'),
+    text: [`${CARE_BOT_EMOJI.dailyPlants} <b>Время позаботиться о растениях!</b>`, 'Задачи на сегодня:', ...lines].join('\n'),
     reply_markup: buildActionKeyboard(items),
   };
 }
@@ -119,7 +129,10 @@ export function buildDailyOverdueNotificationMessage(
   }
   const payload = buildOverdueMessage(obligations);
   return {
-    text: payload.text.replace('⏰ <b>Просроченный уход</b>', '⚠️ <b>Напоминание о просрочке</b>'),
+    text: payload.text.replace(
+      `${CARE_BOT_EMOJI.overdue} <b>Просроченный уход</b>`,
+      `${CARE_BOT_EMOJI.overdueReminder} <b>Напоминание о просрочке</b>`,
+    ),
     reply_markup: payload.reply_markup,
   };
 }
