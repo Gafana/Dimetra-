@@ -33,6 +33,8 @@ export interface UserSettingsRow {
   id: string;
   telegram_chat_id: string;
   notification_time: string;
+  timezone: string;
+  last_notified_date: string | null;
 }
 
 export type CareActionType = 'watering' | 'feeding' | 'repot';

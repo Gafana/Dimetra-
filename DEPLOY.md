@@ -71,7 +71,7 @@ DATABASE_PATH=/data/prod.db
 | `BOT_TOKEN` | Токен бота от [@BotFather](https://t.me/BotFather) |
 | `WEB_APP_URL` | **Публичный HTTPS** URL Mini App (тот же домен, что открывает пользователь) |
 | `DATABASE_PATH` | В Docker уже задано `/data/prod.db`; менять не обязательно |
-| `TZ` | Часовой пояс для cron-уведомлений |
+| `TZ` | Опционально для логов; уведомления Mini App используют **часовой пояс пользователя** в БД |
 
 Для сборки фронта через Compose (опционально):
 

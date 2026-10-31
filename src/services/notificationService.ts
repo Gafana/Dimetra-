@@ -1,12 +1,13 @@
 import type { Telegraf } from 'telegraf';
-import { todayIsoDate } from '../lib/dates.js';
-import { notificationTimeMatchesNow } from '../lib/time.js';
-import { query } from '../db/pool.js';
+import { execute, query } from '../db/pool.js';
+import { isNotificationDue, todayIsoDateInTimeZone } from '../lib/time.js';
 
 interface UserSettingsRow {
   id: string;
   telegram_chat_id: string;
   notification_time: string;
+  timezone: string;
+  last_notified_date: string | null;
 }
 
 interface PlantDueRow {
@@ -45,13 +46,11 @@ function buildCareLines(plant: PlantDueRow, today: string): string[] {
   return lines;
 }
 
-async function findUsersForCurrentMinute(now = new Date()): Promise<UserSettingsRow[]> {
-  const settings = await query<UserSettingsRow>(
-    `SELECT id, telegram_chat_id, notification_time
+async function loadAllUserSettings(): Promise<UserSettingsRow[]> {
+  return query<UserSettingsRow>(
+    `SELECT id, telegram_chat_id, notification_time, timezone, last_notified_date
      FROM user_settings`,
   );
-
-  return settings.filter((row) => notificationTimeMatchesNow(row.notification_time, now));
 }
 
 async function findDuePlantsForUser(
@@ -80,6 +79,13 @@ function buildNotificationMessage(plants: PlantDueRow[], today: string): string 
   return ['🪴 <b>Время позаботиться о растениях!</b>', ...bodyLines].join('\n');
 }
 
+async function markUserNotifiedToday(settingsId: string, dateIso: string): Promise<void> {
+  await execute(`UPDATE user_settings SET last_notified_date = $1 WHERE id = $2`, [
+    dateIso,
+    settingsId,
+  ]);
+}
+
 async function sendNotificationToUser(
   bot: Telegraf,
   telegramChatId: string,
@@ -88,24 +94,76 @@ async function sendNotificationToUser(
   await bot.telegram.sendMessage(telegramChatId, text, { parse_mode: 'HTML' });
 }
 
+async function deliverDailyNotification(
+  bot: Telegraf,
+  user: UserSettingsRow,
+  now: Date,
+  options?: { testPrefix?: boolean },
+): Promise<'sent' | 'empty'> {
+  const today = todayIsoDateInTimeZone(user.timezone, now);
+  const plants = await findDuePlantsForUser(user.telegram_chat_id, today);
+  const message = buildNotificationMessage(plants, today);
+
+  if (!message) {
+    if (options?.testPrefix) {
+      await sendNotificationToUser(
+        bot,
+        user.telegram_chat_id,
+        '🧪 <b>Тест уведомления</b>\n\nСегодня нет растений, которым нужны полив или подкормка.',
+      );
+      return 'empty';
+    }
+    return 'empty';
+  }
+
+  const text = options?.testPrefix ? `🧪 <b>Тест уведомления</b>\n\n${message}` : message;
+  await sendNotificationToUser(bot, user.telegram_chat_id, text);
+  if (!options?.testPrefix) {
+    await markUserNotifiedToday(user.id, today);
+  }
+  return 'sent';
+}
+
 export async function checkAndSendNotifications(bot: Telegraf, now = new Date()): Promise<void> {
-  const today = todayIsoDate();
-  const users = await findUsersForCurrentMinute(now);
+  const users = await loadAllUserSettings();
 
   for (const user of users) {
-    try {
-      const plants = await findDuePlantsForUser(user.telegram_chat_id, today);
-      const message = buildNotificationMessage(plants, today);
-      if (!message) {
-        continue;
-      }
+    if (
+      !isNotificationDue(
+        user.notification_time,
+        user.timezone,
+        user.last_notified_date,
+        now,
+      )
+    ) {
+      continue;
+    }
 
-      await sendNotificationToUser(bot, user.telegram_chat_id, message);
+    try {
+      await deliverDailyNotification(bot, user, now);
     } catch (error) {
       console.error(
         `Failed to send care notification to chat ${user.telegram_chat_id}:`,
         error,
       );
     }
+  }
+}
+
+/** Немедленная отправка уведомления админу (не меняет last_notified_date при пустом списке). */
+export async function sendTestCareNotification(
+  bot: Telegraf,
+  telegramChatId: string,
+  now = new Date(),
+): Promise<void> {
+  const users = await loadAllUserSettings();
+  const user = users.find((row) => row.telegram_chat_id === telegramChatId);
+  if (!user) {
+    throw new Error('user_settings not found for chat');
+  }
+
+  const result = await deliverDailyNotification(bot, user, now, { testPrefix: true });
+  if (result === 'sent' || result === 'empty') {
+    return;
   }
 }

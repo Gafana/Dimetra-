@@ -1,4 +1,5 @@
 import { PROMO_MIGRATION_STATEMENTS } from './migrations/001_promo_codes.js';
+import { USER_SETTINGS_TIMEZONE_MIGRATION_STATEMENTS } from './migrations/002_user_settings_timezone.js';
 
 /** DDL for Dimetra — applied on startup via initDb(). Promo DDL is migration 001_promo_codes. */
 export const SCHEMA_STATEMENTS: readonly string[] = [
@@ -62,4 +63,5 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS idx_plant_catalog_name ON plant_catalog (name)`,
   `ALTER TABLE user_plants ADD COLUMN IF NOT EXISTS photo_url TEXT`,
   ...PROMO_MIGRATION_STATEMENTS,
+  ...USER_SETTINGS_TIMEZONE_MIGRATION_STATEMENTS,
 ];

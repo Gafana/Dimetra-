@@ -12,6 +12,7 @@ import {
   hasStartPayload,
 } from './lib/promoCode.js';
 import { resolveTelegramWebAppUrl } from './lib/webAppUrl.js';
+import { sendTestCareNotification } from './services/notificationService.js';
 import { ensureSettingsForChat } from './services/settingsService.js';
 import {
   createPromoCode,
@@ -280,6 +281,27 @@ export function registerBotHandlers(bot: Telegraf): void {
     await ctx.reply(PROMO_PROMPT);
   });
 
+  bot.command('testnotify', async (ctx) => {
+    const userId = privateTelegramUserId(ctx);
+    if (!userId) {
+      await ctx.reply('Команду /testnotify можно использовать только в личном чате с ботом.');
+      return;
+    }
+    if (!isPromoAdmin(userId)) {
+      await ctx.reply('Команда недоступна.');
+      return;
+    }
+
+    try {
+      await ensureSettingsForChat(userId);
+      await sendTestCareNotification(bot, userId);
+      await ctx.reply('Тестовое уведомление отправлено.');
+    } catch (error) {
+      console.error(`Failed /testnotify for admin ${userId}:`, error);
+      await ctx.reply('Не удалось отправить тестовое уведомление.');
+    }
+  });
+
   bot.command('promo', async (ctx) => {
     const userId = privateTelegramUserId(ctx);
     if (!userId) {
@@ -407,6 +429,7 @@ export async function configureBotCommands(bot: Telegraf): Promise<void> {
   const adminCommands = [
     { command: 'start', description: 'Открыть Dimetra' },
     { command: 'promo', description: 'Создать промокод' },
+    { command: 'testnotify', description: 'Тест уведомления о поливе' },
   ];
 
   for (const adminId of listPromoAdminIds()) {

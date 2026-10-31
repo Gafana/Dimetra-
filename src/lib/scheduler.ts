@@ -6,7 +6,7 @@ let notificationCronTask: ScheduledTask | null = null;
 
 /**
  * Каждую минуту проверяет пользователей и отправляет напоминания.
- * Cron использует локальное время процесса (см. комментарий в lib/time.ts).
+ * Время сравнивается в часовом поясе каждого пользователя (user_settings.timezone).
  */
 export function startNotificationScheduler(bot: Telegraf): ScheduledTask {
   stopNotificationScheduler();

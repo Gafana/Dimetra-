@@ -1,0 +1,22 @@
+name: Keepalive
+
+on:
+  schedule:
+    # Каждые 10 минут (GitHub Actions может запускать с задержкой несколько минут)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render /health
+        env:
+          KEEPALIVE_URL: ${{ vars.KEEPALIVE_URL || secrets.KEEPALIVE_URL }}
+        run: |
+          if [ -z "$KEEPALIVE_URL" ]; then
+            echo "KEEPALIVE_URL is not set (repository variable or secret)."
+            exit 1
+          fi
+          BASE="${KEEPALIVE_URL%/}"
+          curl -fsS --max-time 30 "${BASE}/health"
