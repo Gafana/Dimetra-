@@ -11,6 +11,11 @@ import {
   resolvePromoTimeZone,
   hasStartPayload,
 } from './lib/promoCode.js';
+import {
+  MAIN_MENU_HEAR_LABELS,
+  mainMenuReplyExtra,
+  parseMainMenuLabel,
+} from './bot/mainMenuKeyboard.js';
 import { resolveTelegramWebAppUrl } from './lib/webAppUrl.js';
 import { parseCareCallbackData } from './services/careBotMessages.js';
 import {
@@ -164,10 +169,13 @@ async function syncMiniAppMenu(telegram: Telegram, chatId: number, allowed: bool
 async function replyWithApp(ctx: Context, text: string): Promise<void> {
   const url = resolveTelegramWebAppUrl();
   if (!url) {
-    await ctx.reply(`${text}\n\nКнопка Mini App появится после настройки WEB_APP_URL на HTTPS.`);
+    await ctx.reply(
+      `${text}\n\nКнопка Mini App появится после настройки WEB_APP_URL на HTTPS.`,
+      mainMenuReplyExtra(),
+    );
     return;
   }
-  await ctx.reply(text, Markup.inlineKeyboard([Markup.button.webApp('🌿 Открыть Dimetra', url)]));
+  await ctx.reply(text, mainMenuReplyExtra());
 }
 
 async function openForAdmittedUser(ctx: Context, userId: string, text: string): Promise<void> {
@@ -266,6 +274,42 @@ async function handleInvite(
   await ctx.reply(lines.join('\n'));
 }
 
+async function runTodayPlan(bot: Telegraf, ctx: Context, userId: string): Promise<void> {
+  try {
+    await ensureSettingsForChat(userId);
+    await sendTodayPlanCommand(bot, userId);
+  } catch (error) {
+    console.error(`Failed /today for ${userId}:`, error);
+    await ctx.reply('Не удалось получить план на сегодня.', mainMenuReplyExtra());
+  }
+}
+
+async function runOverdueList(bot: Telegraf, ctx: Context, userId: string): Promise<void> {
+  try {
+    await ensureSettingsForChat(userId);
+    await sendOverdueCommand(bot, userId);
+  } catch (error) {
+    console.error(`Failed /overdue for ${userId}:`, error);
+    await ctx.reply('Не удалось получить список просрочек.', mainMenuReplyExtra());
+  }
+}
+
+async function requireAdmittedPrivateChat(
+  ctx: Context,
+  commandHint: string,
+): Promise<string | null> {
+  const userId = privateTelegramUserId(ctx);
+  if (!userId) {
+    await ctx.reply(`Команду ${commandHint} можно использовать только в личном чате с ботом.`);
+    return null;
+  }
+  if (!(await isAdmitted(userId))) {
+    await ctx.reply('Сначала активируйте доступ по промокоду.');
+    return null;
+  }
+  return userId;
+}
+
 export function registerBotHandlers(bot: Telegraf): void {
   bot.start(async (ctx) => {
     if (hasStartPayload(messageText(ctx))) {
@@ -284,47 +328,46 @@ export function registerBotHandlers(bot: Telegraf): void {
     }
 
     await syncMiniAppMenu(ctx.telegram, ctx.chat.id, false);
-    await ctx.reply(PROMO_PROMPT);
+    await ctx.reply(PROMO_PROMPT, Markup.removeKeyboard());
   });
 
   bot.command('today', async (ctx) => {
-    const userId = privateTelegramUserId(ctx);
+    const userId = await requireAdmittedPrivateChat(ctx, '/today');
     if (!userId) {
-      await ctx.reply('Команду /today можно использовать только в личном чате с ботом.');
       return;
     }
-    if (!(await isAdmitted(userId))) {
-      await ctx.reply('Сначала активируйте доступ по промокоду.');
-      return;
-    }
-
-    try {
-      await ensureSettingsForChat(userId);
-      await sendTodayPlanCommand(bot, userId);
-    } catch (error) {
-      console.error(`Failed /today for ${userId}:`, error);
-      await ctx.reply('Не удалось получить план на сегодня.');
-    }
+    await runTodayPlan(bot, ctx, userId);
   });
 
   bot.command('overdue', async (ctx) => {
-    const userId = privateTelegramUserId(ctx);
+    const userId = await requireAdmittedPrivateChat(ctx, '/overdue');
     if (!userId) {
-      await ctx.reply('Команду /overdue можно использовать только в личном чате с ботом.');
       return;
     }
-    if (!(await isAdmitted(userId))) {
-      await ctx.reply('Сначала активируйте доступ по промокоду.');
+    await runOverdueList(bot, ctx, userId);
+  });
+
+  bot.hears(MAIN_MENU_HEAR_LABELS, async (ctx) => {
+    const userId = privateTelegramUserId(ctx);
+    if (!userId || !(await isAdmitted(userId))) {
       return;
     }
 
-    try {
-      await ensureSettingsForChat(userId);
-      await sendOverdueCommand(bot, userId);
-    } catch (error) {
-      console.error(`Failed /overdue for ${userId}:`, error);
-      await ctx.reply('Не удалось получить список просрочек.');
+    const action = parseMainMenuLabel(messageText(ctx));
+    if (!action) {
+      return;
     }
+
+    if (action === 'today') {
+      await runTodayPlan(bot, ctx, userId);
+      return;
+    }
+    if (action === 'overdue') {
+      await runOverdueList(bot, ctx, userId);
+      return;
+    }
+
+    await openForAdmittedUser(ctx, userId, ADMITTED_INTRO);
   });
 
   bot.on('callback_query', async (ctx) => {
@@ -352,6 +395,7 @@ export function registerBotHandlers(bot: Telegraf): void {
         await ctx.telegram.sendMessage(
           userId,
           `✅ ${label} для «${updated.custom_name}» записан. Следующая дата обновлена.`,
+          mainMenuReplyExtra(),
         );
       }
     } catch (error) {
@@ -466,6 +510,11 @@ export function registerBotHandlers(bot: Telegraf): void {
     const carriesCode = messageCarriesPromoCode(text);
     if (carriesCode) {
       await deleteUserMessage(ctx);
+    }
+
+    const menuAction = parseMainMenuLabel(text);
+    if (menuAction) {
+      return;
     }
 
     if (await isAdmitted(userId)) {
