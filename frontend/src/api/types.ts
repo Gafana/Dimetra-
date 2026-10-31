@@ -11,7 +11,12 @@ export type PlantCareAction = 'watering' | 'feeding';
 
 export type CareActionType = PlantCareAction | 'repot';
 
+/** Сводка просрочки запланированного ухода (список растений). */
+export type PlantCareStatus = 'ok' | 'overdue';
+
 export type CalendarEventKind = 'scheduled' | 'completed';
+
+export type CalendarEventStatus = 'scheduled' | 'completed' | 'overdue';
 
 export interface CalendarEvent {
   id: string;
@@ -20,6 +25,7 @@ export interface CalendarEvent {
   room_name: string | null;
   action_type: CareActionType;
   event_kind: CalendarEventKind;
+  status: CalendarEventStatus;
   date: string;
   done_at?: string;
 }
@@ -45,6 +51,7 @@ export interface UserPlant {
   next_feeding_date: string | null;
   photo_url: string | null;
   created_at: string;
+  care_status: PlantCareStatus;
 }
 
 export interface CareHistoryEntry {

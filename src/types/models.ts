@@ -18,6 +18,10 @@ export interface UserPlantRow {
   created_at: string;
 }
 
+export interface UserPlantWithCareStatus extends UserPlantRow {
+  care_status: PlantCareStatus;
+}
+
 export interface CareHistoryRow {
   id: string;
   plant_id: string;
@@ -26,7 +30,7 @@ export interface CareHistoryRow {
 }
 
 export interface RoomWithPlants extends RoomRow {
-  plants: UserPlantRow[];
+  plants: UserPlantWithCareStatus[];
 }
 
 export interface UserSettingsRow {
@@ -39,7 +43,12 @@ export interface UserSettingsRow {
 
 export type CareActionType = 'watering' | 'feeding' | 'repot';
 
+/** Сводка по просрочке запланированного ухода (для списка растений). */
+export type PlantCareStatus = 'ok' | 'overdue';
+
 export type CalendarEventKind = 'scheduled' | 'completed';
+
+export type CalendarEventStatus = 'scheduled' | 'completed' | 'overdue';
 
 export interface CalendarEvent {
   id: string;
@@ -48,6 +57,8 @@ export interface CalendarEvent {
   room_name: string | null;
   action_type: CareActionType;
   event_kind: CalendarEventKind;
+  /** Запланировано / выполнено / просрочено (относительно «сегодня» в TZ пользователя) */
+  status: CalendarEventStatus;
   /** YYYY-MM-DD */
   date: string;
   /** ISO 8601, только для выполненных */

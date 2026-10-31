@@ -1,7 +1,9 @@
 import type { CalendarEvent } from '../../api/types.js';
 import { formatDisplayDate } from '../../lib/dates.js';
 import { careActionLabel, careEventTitle } from '../../lib/careLabels.js';
+import { CALENDAR_STATUS_LABEL } from '../../lib/calendarEventStatus.js';
 import { GlassPanel } from '../ui/GlassPanel.js';
+import { CalendarEventStatusDot } from './CalendarEventStatusDot.js';
 
 export function CalendarDayDetail({
   date,
@@ -27,7 +29,10 @@ export function CalendarDayDetail({
               className="flex items-start justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.04] px-3 py-2.5 text-sm"
             >
               <div className="min-w-0">
-                <p className="font-medium text-sage-100">{careEventTitle(event.action_type, event.event_kind)}</p>
+                <p className="flex items-center gap-2 font-medium text-sage-100">
+                  <CalendarEventStatusDot status={event.status} size="md" />
+                  <span>{careEventTitle(event.action_type, event.event_kind)}</span>
+                </p>
                 <p className="truncate text-sage-300/90">{event.plant_name}</p>
                 {event.room_name ? (
                   <p className="text-xs text-sage-400/80">{event.room_name}</p>
@@ -40,8 +45,9 @@ export function CalendarDayDetail({
                     ? 'bg-sage-400/15 text-sage-200'
                     : 'bg-white/8 text-sage-400',
                 ].join(' ')}
+                title={CALENDAR_STATUS_LABEL[event.status]}
               >
-                {event.event_kind === 'scheduled' ? 'План' : 'Готово'}
+                {CALENDAR_STATUS_LABEL[event.status]}
               </span>
             </li>
           ))}

@@ -1,8 +1,8 @@
-import { addDaysToIsoDate } from '../lib/dates.js';
 import { query } from '../db/pool.js';
+import { calendarEventStatus, nextRepotIsoDate } from '../lib/plantCareStatus.js';
+import { todayIsoDateInTimeZone } from '../lib/time.js';
+import { ensureSettingsForChat } from './settingsService.js';
 import type { CalendarEvent, CareActionType } from '../types/models.js';
-
-const REPOT_INTERVAL_DAYS = 365;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -39,6 +39,7 @@ function pushScheduled(
   date: string | null,
   from: string,
   to: string,
+  todayIso: string,
 ): void {
   if (!date || !isDateInRange(date, from, to)) {
     return;
@@ -50,6 +51,7 @@ function pushScheduled(
     room_name: plant.room_name,
     action_type: actionType,
     event_kind: 'scheduled',
+    status: calendarEventStatus('scheduled', date, todayIso),
     date,
   });
 }
@@ -63,6 +65,9 @@ export async function listCalendarEvents(
     throw new Error('Invalid calendar range');
   }
 
+  const settings = await ensureSettingsForChat(telegramChatId);
+  const todayIso = todayIsoDateInTimeZone(settings.timezone);
+
   const plants = await query<PlantCalendarRow>(
     `SELECT up.id, up.custom_name, up.next_watering_date, up.next_feeding_date, up.last_repot_date,
             r.name AS room_name
@@ -75,12 +80,11 @@ export async function listCalendarEvents(
   const events: CalendarEvent[] = [];
 
   for (const plant of plants) {
-    pushScheduled(events, plant, 'watering', plant.next_watering_date, from, to);
-    pushScheduled(events, plant, 'feeding', plant.next_feeding_date, from, to);
-
+    pushScheduled(events, plant, 'watering', plant.next_watering_date, from, to, todayIso);
+    pushScheduled(events, plant, 'feeding', plant.next_feeding_date, from, to, todayIso);
     if (plant.last_repot_date) {
-      const nextRepot = addDaysToIsoDate(plant.last_repot_date, REPOT_INTERVAL_DAYS);
-      pushScheduled(events, plant, 'repot', nextRepot, from, to);
+      const nextRepot = nextRepotIsoDate(plant.last_repot_date);
+      pushScheduled(events, plant, 'repot', nextRepot, from, to, todayIso);
     }
   }
 
@@ -97,6 +101,7 @@ export async function listCalendarEvents(
   );
 
   for (const row of history) {
+    const date = historyDateFromDoneAt(row.done_at);
     events.push({
       id: row.id,
       plant_id: row.plant_id,
@@ -104,7 +109,8 @@ export async function listCalendarEvents(
       room_name: row.room_name,
       action_type: row.action_type,
       event_kind: 'completed',
-      date: historyDateFromDoneAt(row.done_at),
+      status: calendarEventStatus('completed', date, todayIso),
+      date,
       done_at: row.done_at,
     });
   }
