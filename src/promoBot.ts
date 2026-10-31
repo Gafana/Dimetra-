@@ -12,6 +12,8 @@ import {
   hasStartPayload,
 } from './lib/promoCode.js';
 import {
+  INLINE_OPEN_APP_LABEL,
+  inlineOpenAppExtra,
   MAIN_MENU_HEAR_LABELS,
   mainMenuReplyExtra,
   parseMainMenuLabel,
@@ -166,16 +168,26 @@ async function syncMiniAppMenu(telegram: Telegram, chatId: number, allowed: bool
   }
 }
 
-async function replyWithApp(ctx: Context, text: string): Promise<void> {
+const OPEN_APP_INLINE_PROMPT = `Нажмите «${INLINE_OPEN_APP_LABEL}», чтобы войти в приложение.`;
+
+async function sendInlineOpenAppPrompt(
+  ctx: Context,
+  promptText = OPEN_APP_INLINE_PROMPT,
+): Promise<void> {
   const url = resolveTelegramWebAppUrl();
   if (!url) {
     await ctx.reply(
-      `${text}\n\nКнопка Mini App появится после настройки WEB_APP_URL на HTTPS.`,
+      `${promptText}\n\nКнопка Mini App появится после настройки WEB_APP_URL на HTTPS.`,
       mainMenuReplyExtra(),
     );
     return;
   }
+  await ctx.reply(promptText, inlineOpenAppExtra());
+}
+
+async function replyWithApp(ctx: Context, text: string): Promise<void> {
   await ctx.reply(text, mainMenuReplyExtra());
+  await sendInlineOpenAppPrompt(ctx);
 }
 
 async function openForAdmittedUser(ctx: Context, userId: string, text: string): Promise<void> {
@@ -367,7 +379,11 @@ export function registerBotHandlers(bot: Telegraf): void {
       return;
     }
 
-    await openForAdmittedUser(ctx, userId, ADMITTED_INTRO);
+    await ensureSettingsForChat(userId);
+    if (ctx.chat) {
+      await syncMiniAppMenu(ctx.telegram, ctx.chat.id, true);
+    }
+    await sendInlineOpenAppPrompt(ctx);
   });
 
   bot.on('callback_query', async (ctx) => {
@@ -551,7 +567,33 @@ export function registerBotHandlers(bot: Telegraf): void {
   });
 }
 
+async function configureDefaultMenuButton(bot: Telegraf): Promise<void> {
+  const url = resolveTelegramWebAppUrl();
+  try {
+    if (url) {
+      await bot.telegram.setChatMenuButton({
+        menuButton: {
+          type: 'web_app',
+          text: 'Dimetra',
+          web_app: { url },
+        },
+      });
+      return;
+    }
+    await bot.telegram.setChatMenuButton({
+      menuButton: { type: 'commands' },
+    });
+  } catch (error) {
+    console.error(
+      'Failed to set default chat menu button:',
+      telegramErrorCode(error) ?? 'unknown',
+    );
+  }
+}
+
 export async function configureBotCommands(bot: Telegraf): Promise<void> {
+  await configureDefaultMenuButton(bot);
+
   await bot.telegram.setMyCommands([
     { command: 'start', description: 'Открыть Dimetra' },
     { command: 'today', description: 'План ухода на сегодня' },
