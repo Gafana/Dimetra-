@@ -123,3 +123,12 @@ select option {
   box-shadow: 0 0 20px rgba(143, 184, 154, 0.35);
   color: #e8f0eb;
 }
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
