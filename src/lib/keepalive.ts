@@ -51,11 +51,11 @@ export function startKeepalivePing(): void {
 
   void pingHealth(healthUrl);
 
-  keepaliveCronTask = cron.schedule('*/10 * * * *', () => {
+  keepaliveCronTask = cron.schedule('*/5 * * * *', () => {
     void pingHealth(healthUrl);
   });
 
-  console.log(`Keepalive ping scheduled every 10 minutes → ${healthUrl}`);
+  console.log(`Keepalive ping scheduled every 5 minutes → ${healthUrl}`);
 }
 
 export function stopKeepalivePing(): void {

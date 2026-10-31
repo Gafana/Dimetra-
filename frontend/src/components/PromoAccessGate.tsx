@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import axios from 'axios';
-import { fetchAccessStatus } from '../api/index.js';
+import { fetchAccessStatus, nudgeNotificationWake } from '../api/index.js';
 import { getApiErrorMessage } from '../lib/apiError.js';
 import { BrandLogo } from './BrandLogo.js';
 import { GlassPanel } from './ui/GlassPanel.js';
@@ -46,6 +46,15 @@ export function PromoAccessGate({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [attempt]);
+
+  useEffect(() => {
+    if (state !== 'ready') {
+      return;
+    }
+    void nudgeNotificationWake().catch(() => {
+      /* бот может быть недоступен локально */
+    });
+  }, [state]);
 
   if (state === 'ready') {
     return children;

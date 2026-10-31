@@ -10,6 +10,8 @@ import { catalogRouter } from './routes/catalog.js';
 import { plantsRouter } from './routes/plants.js';
 import { roomsRouter } from './routes/rooms.js';
 import { settingsRouter } from './routes/settings.js';
+import { notificationsRouter } from './routes/notifications.js';
+import { maybeWakeNotificationCheck } from './lib/notificationWake.js';
 
 export function createApp() {
   const app = express();
@@ -18,6 +20,7 @@ export function createApp() {
   app.use(express.json({ limit: '512kb' }));
 
   app.get('/health', (_req, res) => {
+    maybeWakeNotificationCheck('health');
     res.json({ ok: true });
   });
 
@@ -29,6 +32,7 @@ export function createApp() {
   app.use('/api/rooms', apiAuthMiddleware, requirePromoAccess, roomsRouter);
   app.use('/api/plants', apiAuthMiddleware, requirePromoAccess, plantsRouter);
   app.use('/api/settings', apiAuthMiddleware, requirePromoAccess, settingsRouter);
+  app.use('/api/notifications', apiAuthMiddleware, requirePromoAccess, notificationsRouter);
 
   app.use(errorHandler);
 

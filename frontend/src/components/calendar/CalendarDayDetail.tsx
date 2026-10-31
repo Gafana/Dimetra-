@@ -43,7 +43,9 @@ export function CalendarDayDetail({
                   'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium',
                   event.event_kind === 'scheduled'
                     ? 'bg-sage-400/15 text-sage-200'
-                    : 'bg-white/8 text-sage-400',
+                    : event.status === 'overdue'
+                      ? 'bg-red-500/15 text-red-100'
+                      : 'bg-white/8 text-sage-400',
                 ].join(' ')}
                 title={CALENDAR_STATUS_LABEL[event.status]}
               >

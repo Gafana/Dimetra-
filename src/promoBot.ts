@@ -12,7 +12,13 @@ import {
   hasStartPayload,
 } from './lib/promoCode.js';
 import { resolveTelegramWebAppUrl } from './lib/webAppUrl.js';
-import { sendTestCareNotification } from './services/notificationService.js';
+import { parseCareCallbackData } from './services/careBotMessages.js';
+import {
+  sendOverdueCommand,
+  sendTestCareNotification,
+  sendTodayPlanCommand,
+} from './services/notificationService.js';
+import { recordPlantAction } from './services/plantsService.js';
 import { ensureSettingsForChat } from './services/settingsService.js';
 import {
   createPromoCode,
@@ -281,6 +287,79 @@ export function registerBotHandlers(bot: Telegraf): void {
     await ctx.reply(PROMO_PROMPT);
   });
 
+  bot.command('today', async (ctx) => {
+    const userId = privateTelegramUserId(ctx);
+    if (!userId) {
+      await ctx.reply('Команду /today можно использовать только в личном чате с ботом.');
+      return;
+    }
+    if (!(await isAdmitted(userId))) {
+      await ctx.reply('Сначала активируйте доступ по промокоду.');
+      return;
+    }
+
+    try {
+      await ensureSettingsForChat(userId);
+      await sendTodayPlanCommand(bot, userId);
+    } catch (error) {
+      console.error(`Failed /today for ${userId}:`, error);
+      await ctx.reply('Не удалось получить план на сегодня.');
+    }
+  });
+
+  bot.command('overdue', async (ctx) => {
+    const userId = privateTelegramUserId(ctx);
+    if (!userId) {
+      await ctx.reply('Команду /overdue можно использовать только в личном чате с ботом.');
+      return;
+    }
+    if (!(await isAdmitted(userId))) {
+      await ctx.reply('Сначала активируйте доступ по промокоду.');
+      return;
+    }
+
+    try {
+      await ensureSettingsForChat(userId);
+      await sendOverdueCommand(bot, userId);
+    } catch (error) {
+      console.error(`Failed /overdue for ${userId}:`, error);
+      await ctx.reply('Не удалось получить список просрочек.');
+    }
+  });
+
+  bot.on('callback_query', async (ctx) => {
+    const userId = privateTelegramUserId(ctx);
+    if (!userId || !(await isAdmitted(userId))) {
+      await ctx.answerCbQuery('Нет доступа');
+      return;
+    }
+
+    const query = ctx.callbackQuery;
+    if (!('data' in query) || !query.data) {
+      return;
+    }
+    const data = query.data;
+    const parsed = parseCareCallbackData(data);
+    if (!parsed) {
+      return;
+    }
+
+    try {
+      const updated = await recordPlantAction(userId, parsed.plantId, parsed.actionType);
+      const label = parsed.actionType === 'watering' ? 'Полив' : 'Подкормка';
+      await ctx.answerCbQuery(`${label} отмечен ✓`);
+      if ('message' in ctx.callbackQuery && ctx.callbackQuery.message) {
+        await ctx.telegram.sendMessage(
+          userId,
+          `✅ ${label} для «${updated.custom_name}» записан. Следующая дата обновлена.`,
+        );
+      }
+    } catch (error) {
+      console.error(`Care callback failed for ${userId}:`, error);
+      await ctx.answerCbQuery('Не удалось выполнить действие');
+    }
+  });
+
   bot.command('testnotify', async (ctx) => {
     const userId = privateTelegramUserId(ctx);
     if (!userId) {
@@ -424,12 +503,18 @@ export function registerBotHandlers(bot: Telegraf): void {
 }
 
 export async function configureBotCommands(bot: Telegraf): Promise<void> {
-  await bot.telegram.setMyCommands([{ command: 'start', description: 'Открыть Dimetra' }]);
+  await bot.telegram.setMyCommands([
+    { command: 'start', description: 'Открыть Dimetra' },
+    { command: 'today', description: 'План ухода на сегодня' },
+    { command: 'overdue', description: 'Актуальные просрочки' },
+  ]);
 
   const adminCommands = [
     { command: 'start', description: 'Открыть Dimetra' },
+    { command: 'today', description: 'План ухода на сегодня' },
+    { command: 'overdue', description: 'Актуальные просрочки' },
     { command: 'promo', description: 'Создать промокод' },
-    { command: 'testnotify', description: 'Тест уведомления о поливе' },
+    { command: 'testnotify', description: 'Тест уведомлений' },
   ];
 
   for (const adminId of listPromoAdminIds()) {

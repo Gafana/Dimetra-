@@ -5,7 +5,14 @@ import { execute, query, queryOne } from '../db/pool.js';
 import type { Season } from '../db/catalog.js';
 import { HttpError } from '../lib/errors.js';
 import type { CareActionType, CareHistoryRow, UserPlantRow, UserPlantWithCareStatus } from '../types/models.js';
+import { todayIsoDateInTimeZone } from '../lib/time.js';
+import {
+  closeOpenObligationForAction,
+  syncCareObligationsForPlant,
+  type ObligationCareAction,
+} from './careObligationService.js';
 import { attachCareStatusToPlant } from './plantCareStatusService.js';
+import { ensureSettingsForChat } from './settingsService.js';
 
 const PLANT_COLUMNS = `id, custom_name, room_id, catalog_id, last_repot_date, current_season,
             next_watering_date, next_feeding_date, photo_url, created_at`;
@@ -51,12 +58,19 @@ async function insertCareHistory(
   plantId: string,
   actionType: CareActionType,
   doneAt: string,
-): Promise<void> {
+): Promise<string> {
+  const id = uuidv4();
   await execute(
     `INSERT INTO care_history (id, plant_id, action_type, done_at)
      VALUES ($1, $2, $3, $4)`,
-    [uuidv4(), plantId, actionType, doneAt],
+    [id, plantId, actionType, doneAt],
   );
+  return id;
+}
+
+async function todayForUser(telegramChatId: string): Promise<string> {
+  const settings = await ensureSettingsForChat(telegramChatId);
+  return todayIsoDateInTimeZone(settings.timezone);
 }
 
 export async function createPlant(
@@ -132,6 +146,12 @@ export async function updatePlantSchedule(
     [nextWatering, nextFeeding, plantId, telegramChatId],
   );
 
+  const todayIso = await todayForUser(telegramChatId);
+  await syncCareObligationsForPlant(
+    { id: plantId, next_watering_date: nextWatering, next_feeding_date: nextFeeding },
+    todayIso,
+  );
+
   return getPlantResponse(telegramChatId, plantId);
 }
 
@@ -185,7 +205,13 @@ export async function updatePlant(
     [customName, roomId, season, nextWatering, nextFeeding, plantId, telegramChatId],
   );
 
-  return getPlantOrThrow(telegramChatId, plantId);
+  const todayIso = await todayForUser(telegramChatId);
+  await syncCareObligationsForPlant(
+    { id: plantId, next_watering_date: nextWatering, next_feeding_date: nextFeeding },
+    todayIso,
+  );
+
+  return getPlantResponse(telegramChatId, plantId);
 }
 
 export async function deletePlant(telegramChatId: string, plantId: string): Promise<void> {
@@ -213,19 +239,25 @@ export async function listPlantCareHistory(
 export async function recordPlantAction(
   telegramChatId: string,
   plantId: string,
-  actionType: 'watering' | 'feeding',
+  actionType: ObligationCareAction,
 ): Promise<UserPlantWithCareStatus> {
   const plant = await getPlantOrThrow(telegramChatId, plantId);
   const intervals = await getCareIntervals(plant.catalog_id, plant.current_season);
-  const doneDate = todayIsoDate();
+  const doneDate = await todayForUser(telegramChatId);
+  const doneAt = nowIsoDateTime();
 
-  await insertCareHistory(plantId, actionType, nowIsoDateTime());
+  const historyId = await insertCareHistory(plantId, actionType, doneAt);
+  await closeOpenObligationForAction(plantId, actionType, historyId);
 
   if (actionType === 'watering') {
     const nextWatering = addDaysToIsoDate(doneDate, intervals.wateringDays);
     await execute(
       `UPDATE user_plants SET next_watering_date = $1 WHERE id = $2 AND telegram_chat_id = $3`,
       [nextWatering, plantId, telegramChatId],
+    );
+    await syncCareObligationsForPlant(
+      { id: plantId, next_watering_date: nextWatering, next_feeding_date: plant.next_feeding_date },
+      doneDate,
     );
     return attachCareStatus(telegramChatId, { ...plant, next_watering_date: nextWatering });
   }
@@ -234,6 +266,10 @@ export async function recordPlantAction(
   await execute(
     `UPDATE user_plants SET next_feeding_date = $1 WHERE id = $2 AND telegram_chat_id = $3`,
     [nextFeeding, plantId, telegramChatId],
+  );
+  await syncCareObligationsForPlant(
+    { id: plantId, next_watering_date: plant.next_watering_date, next_feeding_date: nextFeeding },
+    doneDate,
   );
   return attachCareStatus(telegramChatId, { ...plant, next_feeding_date: nextFeeding });
 }

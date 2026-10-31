@@ -54,5 +54,8 @@ export function calendarEventStatus(
   if (eventKind === 'completed') {
     return 'completed';
   }
+  if (eventKind === 'overdue') {
+    return 'overdue';
+  }
   return isScheduledCareOverdue(date, todayIso) ? 'overdue' : 'scheduled';
 }

@@ -1,6 +1,7 @@
 import { query } from '../db/pool.js';
 import { calendarEventStatus, nextRepotIsoDate } from '../lib/plantCareStatus.js';
 import { todayIsoDateInTimeZone } from '../lib/time.js';
+import { listObligationsInRange, syncCareObligationsForUser } from './careObligationService.js';
 import { ensureSettingsForChat } from './settingsService.js';
 import type { CalendarEvent, CareActionType } from '../types/models.js';
 
@@ -41,7 +42,7 @@ function pushScheduled(
   to: string,
   todayIso: string,
 ): void {
-  if (!date || !isDateInRange(date, from, to)) {
+  if (!date || !isDateInRange(date, from, to) || date < todayIso) {
     return;
   }
   events.push({
@@ -67,6 +68,7 @@ export async function listCalendarEvents(
 
   const settings = await ensureSettingsForChat(telegramChatId);
   const todayIso = todayIsoDateInTimeZone(settings.timezone);
+  await syncCareObligationsForUser(telegramChatId, todayIso);
 
   const plants = await query<PlantCalendarRow>(
     `SELECT up.id, up.custom_name, up.next_watering_date, up.next_feeding_date, up.last_repot_date,
@@ -86,6 +88,20 @@ export async function listCalendarEvents(
       const nextRepot = nextRepotIsoDate(plant.last_repot_date);
       pushScheduled(events, plant, 'repot', nextRepot, from, to, todayIso);
     }
+  }
+
+  const obligations = await listObligationsInRange(telegramChatId, from, to);
+  for (const row of obligations) {
+    events.push({
+      id: `obligation:${row.id}`,
+      plant_id: row.plant_id,
+      plant_name: row.plant_name,
+      room_name: row.room_name,
+      action_type: row.action_type,
+      event_kind: 'overdue',
+      status: row.status === 'open' ? 'overdue' : 'overdue_closed',
+      date: row.due_date,
+    });
   }
 
   const history = await query<HistoryCalendarRow>(
@@ -119,8 +135,21 @@ export async function listCalendarEvents(
     if (a.date !== b.date) {
       return a.date.localeCompare(b.date);
     }
-    if (a.event_kind !== b.event_kind) {
-      return a.event_kind === 'scheduled' ? -1 : 1;
+    const kindOrder = (kind: CalendarEvent['event_kind']): number => {
+      switch (kind) {
+        case 'overdue':
+          return 0;
+        case 'scheduled':
+          return 1;
+        case 'completed':
+          return 2;
+        default:
+          return 3;
+      }
+    };
+    const orderDiff = kindOrder(a.event_kind) - kindOrder(b.event_kind);
+    if (orderDiff !== 0) {
+      return orderDiff;
     }
     return a.plant_name.localeCompare(b.plant_name, 'ru');
   });

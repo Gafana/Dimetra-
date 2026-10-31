@@ -2,8 +2,8 @@ name: Keepalive
 
 on:
   schedule:
-    # Каждые 10 минут (GitHub Actions может запускать с задержкой несколько минут)
-    - cron: '*/10 * * * *'
+    # Каждые 5 минут (GitHub Actions может запускать с задержкой несколько минут)
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
