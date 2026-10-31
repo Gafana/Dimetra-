@@ -1,4 +1,4 @@
-import { Camera, Clock, Droplets, Shovel, Sparkles } from 'lucide-react';
+import { Camera, Clock, Droplets, Pencil, Shovel, Sparkles } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import {
   updatePlantPhoto,
@@ -6,12 +6,13 @@ import {
   type PlantCareAction,
   type UserPlant,
 } from '../api/index.js';
-import { formatDisplayDate, isCareDue, todayIsoDate } from '../lib/dates.js';
+import { formatDisplayDate } from '../lib/dates.js';
 import { compressPlantPhotoFile } from '../lib/compressPlantPhoto.js';
 import { getApiErrorMessage } from '../lib/apiError.js';
 import { showTelegramAlert } from '../lib/telegramUi.js';
 import { PlantCardCareStatusDot } from './PlantCardCareStatusDot.js';
 import { PlantCareHistoryModal } from './PlantCareHistoryModal.js';
+import { PlantEditModal } from './PlantEditModal.js';
 import { GlassPanel } from './ui/GlassPanel.js';
 import { Spinner } from './ui/Spinner.js';
 
@@ -22,6 +23,7 @@ interface PlantCardProps {
   onFeed: (plantId: string) => void;
   onRepot: (plantId: string) => void;
   onPlantUpdate: (plant: UserPlant) => void;
+  onPlantDelete: (plantId: string) => void;
 }
 
 export function PlantCard({
@@ -31,14 +33,13 @@ export function PlantCard({
   onFeed,
   onRepot,
   onPlantUpdate,
+  onPlantDelete,
 }: PlantCardProps) {
-  const today = todayIsoDate();
-  const wateringDue = isCareDue(plant.next_watering_date, today);
-  const feedingDue = isCareDue(plant.next_feeding_date, today);
   const inputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState<'watering' | 'feeding' | null>(null);
   const actionsLocked = Boolean(pendingAction) || uploadingPhoto || savingSchedule !== null;
 
@@ -95,6 +96,17 @@ export function PlantCard({
 
           <button
             type="button"
+            aria-label="Редактировать"
+            disabled={Boolean(pendingAction)}
+            onClick={() => setEditOpen(true)}
+            className={`${overlayIconButtonClass} right-14`}
+            title="Редактировать"
+          >
+            <Pencil className="h-4 w-4" strokeWidth={1.75} />
+          </button>
+
+          <button
+            type="button"
             aria-label="История ухода"
             disabled={Boolean(pendingAction)}
             onClick={() => setHistoryOpen(true)}
@@ -125,12 +137,6 @@ export function PlantCard({
             onChange={(e) => void handlePhotoPick(e.target.files?.[0])}
           />
 
-          {(wateringDue || feedingDue) && (
-            <div className="absolute left-3 right-3 top-14 flex flex-wrap justify-center gap-1">
-              {wateringDue ? <StatusBadge label="Полив" tone="amber" /> : null}
-              {feedingDue ? <StatusBadge label="Удобр." tone="mint" /> : null}
-            </div>
-          )}
         </div>
 
         <div className="space-y-3 p-4">
@@ -195,31 +201,21 @@ export function PlantCard({
           onClose={() => setHistoryOpen(false)}
         />
       ) : null}
+
+      {editOpen ? (
+        <PlantEditModal
+          plant={plant}
+          onClose={() => setEditOpen(false)}
+          onSaved={onPlantUpdate}
+          onDeleted={onPlantDelete}
+        />
+      ) : null}
     </>
   );
 }
 
 const overlayIconButtonClass =
   'absolute top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-sage-100 ring-1 ring-white/20 backdrop-blur-sm transition-colors hover:bg-black/55 disabled:opacity-50';
-
-function StatusBadge({
-  label,
-  tone,
-}: {
-  label: string;
-  tone: 'amber' | 'mint';
-}) {
-  const styles = {
-    amber: 'bg-amber-400/15 text-amber-100 ring-amber-300/25',
-    mint: 'bg-sage-400/20 text-sage-100 ring-sage-300/30',
-  }[tone];
-
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${styles}`}>
-      {label}
-    </span>
-  );
-}
 
 function EditableDateMetric({
   label,

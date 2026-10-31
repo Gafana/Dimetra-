@@ -40,6 +40,14 @@ export interface CreatePlantPayload {
   current_season: PlantSeason;
 }
 
+export interface UpdatePlantPayload {
+  custom_name?: string;
+  room_id?: string | null;
+  current_season?: PlantSeason;
+  next_watering_date?: string | null;
+  next_feeding_date?: string | null;
+}
+
 export interface UserPlant {
   id: string;
   custom_name: string;

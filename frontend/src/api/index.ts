@@ -3,6 +3,7 @@ import type {
   CalendarEvent,
   CareHistoryEntry,
   CreatePlantPayload,
+  UpdatePlantPayload,
   PlantCatalogEntry,
   PlantCatalogPickerEntry,
   PlantCareAction,
@@ -103,6 +104,18 @@ export async function performPlantAction(
 export async function repotPlant(plantId: string): Promise<UserPlant> {
   const { data } = await apiClient.post<UserPlant>(`/api/plants/${plantId}/repot`);
   return data;
+}
+
+export async function updatePlant(
+  plantId: string,
+  payload: UpdatePlantPayload,
+): Promise<UserPlant> {
+  const { data } = await apiClient.patch<UserPlant>(`/api/plants/${plantId}`, payload);
+  return data;
+}
+
+export async function deletePlant(plantId: string): Promise<void> {
+  await apiClient.delete(`/api/plants/${plantId}`);
 }
 
 export async function updatePlantSchedule(
