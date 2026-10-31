@@ -8,6 +8,7 @@
     "dev:backend": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-backend.ps1",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:all": "concurrently -n backend,frontend -c blue,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-local.ps1",
     "tunnels": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-tunnels.ps1",
     "neon:agent-setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/neon-agent-setup.ps1",
     "build": "tsc",
@@ -15,6 +16,10 @@
     "build:all": "npm run build && npm run build:frontend",
     "typecheck": "tsc --noEmit",
     "db:init": "tsx scripts/db-init.ts",
+    "catalog:scrape": "tsx scripts/scrape-floralworld-catalog.ts",
+    "catalog:scrape:sample": "tsx scripts/scrape-floralworld-catalog.ts --limit 40",
+    "catalog:sync-db": "tsx scripts/sync-plant-catalog-to-db.ts",
+    "catalog:import": "tsx scripts/scrape-floralworld-catalog.ts && tsx scripts/sync-plant-catalog-to-db.ts --update",
     "start": "node dist/index.js"
   },
   "engines": {
@@ -37,6 +42,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.11.11",
     "@types/uuid": "^10.0.0",
+    "cheerio": "^1.0.0",
     "concurrently": "^9.1.2",
     "localtunnel": "^2.0.2",
     "tsx": "^4.19.3",

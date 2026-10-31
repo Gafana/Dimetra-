@@ -18,6 +18,20 @@ export function formatDisplayDate(isoDate: string | null): string {
   });
 }
 
+export function formatDateTime(isoDateTime: string): string {
+  const date = new Date(isoDateTime);
+  if (Number.isNaN(date.getTime())) {
+    return isoDateTime;
+  }
+  return date.toLocaleString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function isCareDue(nextDate: string | null, today = todayIsoDate()): boolean {
   if (!nextDate) {
     return false;

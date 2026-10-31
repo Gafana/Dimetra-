@@ -17,7 +17,9 @@ async function main(): Promise<void> {
     console.log(`HTTP server listening on port ${PORT}`);
   });
 
-  if (process.env.BOT_TOKEN) {
+  const skipBotForLocalDev = process.env.LOCAL_DEV === 'true';
+
+  if (process.env.BOT_TOKEN && !skipBotForLocalDev) {
     bot = createBot();
     void bot
       .launch(() => {
@@ -27,6 +29,8 @@ async function main(): Promise<void> {
       .catch((error) => {
         console.error('Failed to start Telegram bot:', error);
       });
+  } else if (skipBotForLocalDev) {
+    console.warn('LOCAL_DEV=true — Telegram bot skipped (use Render bot or disable LOCAL_DEV to test polling locally)');
   } else {
     console.warn('BOT_TOKEN is not set — HTTP API only (Telegram bot disabled)');
   }

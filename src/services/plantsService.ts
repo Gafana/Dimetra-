@@ -1,10 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getCareIntervals, findCatalogPlant } from '../lib/catalog.js';
 import { addDaysToIsoDate, nowIsoDateTime, todayIsoDate } from '../lib/dates.js';
-import { execute, queryOne } from '../db/pool.js';
+import { execute, query, queryOne } from '../db/pool.js';
 import type { Season } from '../db/catalog.js';
 import { HttpError } from '../lib/errors.js';
-import type { CareActionType, UserPlantRow } from '../types/models.js';
+import type { CareActionType, CareHistoryRow, UserPlantRow } from '../types/models.js';
+
+const PLANT_COLUMNS = `id, custom_name, room_id, catalog_id, last_repot_date, current_season,
+            next_watering_date, next_feeding_date, photo_url, created_at`;
 import { roomExists } from './roomsService.js';
 
 interface CreatePlantInput {
@@ -17,8 +20,7 @@ interface CreatePlantInput {
 
 async function getPlantOrThrow(telegramChatId: string, plantId: string): Promise<UserPlantRow> {
   const plant = await queryOne<UserPlantRow>(
-    `SELECT id, custom_name, room_id, catalog_id, last_repot_date, current_season,
-            next_watering_date, next_feeding_date, created_at
+    `SELECT ${PLANT_COLUMNS}
      FROM user_plants
      WHERE id = $1 AND telegram_chat_id = $2`,
     [plantId, telegramChatId],
@@ -46,7 +48,7 @@ export async function createPlant(
   telegramChatId: string,
   input: CreatePlantInput,
 ): Promise<UserPlantRow> {
-  if (!findCatalogPlant(input.catalog_id)) {
+  if (!(await findCatalogPlant(input.catalog_id))) {
     throw new HttpError(`Unknown catalog_id: ${input.catalog_id}`, 400);
   }
 
@@ -54,7 +56,7 @@ export async function createPlant(
     throw new HttpError('Room not found', 404);
   }
 
-  const intervals = getCareIntervals(input.catalog_id, input.current_season);
+  const intervals = await getCareIntervals(input.catalog_id, input.current_season);
   const baseDate = todayIsoDate();
 
   const plant = {
@@ -89,8 +91,60 @@ export async function createPlant(
     ],
   );
 
-  const { telegram_chat_id: _owner, ...publicPlant } = plant;
-  return publicPlant as UserPlantRow;
+  return getPlantOrThrow(telegramChatId, plant.id);
+}
+
+export interface UpdatePlantScheduleInput {
+  next_watering_date?: string | null;
+  next_feeding_date?: string | null;
+}
+
+export async function updatePlantSchedule(
+  telegramChatId: string,
+  plantId: string,
+  input: UpdatePlantScheduleInput,
+): Promise<UserPlantRow> {
+  const plant = await getPlantOrThrow(telegramChatId, plantId);
+  const nextWatering =
+    input.next_watering_date !== undefined ? input.next_watering_date : plant.next_watering_date;
+  const nextFeeding =
+    input.next_feeding_date !== undefined ? input.next_feeding_date : plant.next_feeding_date;
+
+  await execute(
+    `UPDATE user_plants
+     SET next_watering_date = $1, next_feeding_date = $2
+     WHERE id = $3 AND telegram_chat_id = $4`,
+    [nextWatering, nextFeeding, plantId, telegramChatId],
+  );
+
+  return getPlantOrThrow(telegramChatId, plantId);
+}
+
+export async function updatePlantPhoto(
+  telegramChatId: string,
+  plantId: string,
+  photoUrl: string | null,
+): Promise<UserPlantRow> {
+  await getPlantOrThrow(telegramChatId, plantId);
+  await execute(
+    `UPDATE user_plants SET photo_url = $1 WHERE id = $2 AND telegram_chat_id = $3`,
+    [photoUrl, plantId, telegramChatId],
+  );
+  return getPlantOrThrow(telegramChatId, plantId);
+}
+
+export async function listPlantCareHistory(
+  telegramChatId: string,
+  plantId: string,
+): Promise<CareHistoryRow[]> {
+  await getPlantOrThrow(telegramChatId, plantId);
+  return query<CareHistoryRow>(
+    `SELECT id, plant_id, action_type, done_at
+     FROM care_history
+     WHERE plant_id = $1
+     ORDER BY done_at DESC`,
+    [plantId],
+  );
 }
 
 export async function recordPlantAction(
@@ -99,7 +153,7 @@ export async function recordPlantAction(
   actionType: 'watering' | 'feeding',
 ): Promise<UserPlantRow> {
   const plant = await getPlantOrThrow(telegramChatId, plantId);
-  const intervals = getCareIntervals(plant.catalog_id, plant.current_season);
+  const intervals = await getCareIntervals(plant.catalog_id, plant.current_season);
   const doneDate = todayIsoDate();
 
   await insertCareHistory(plantId, actionType, nowIsoDateTime());

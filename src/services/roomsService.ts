@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne } from '../db/pool.js';
-import type { RoomWithPlants, UserPlantRow } from '../types/models.js';
+import { execute, query, queryOne } from '../db/pool.js';
+import { HttpError } from '../lib/errors.js';
+import type { RoomRow, RoomWithPlants, UserPlantRow } from '../types/models.js';
 
 export async function listRoomsWithPlants(telegramChatId: string): Promise<RoomWithPlants[]> {
   const rooms = await query<{ id: string; name: string }>(
@@ -19,7 +20,7 @@ export async function listRoomsWithPlants(telegramChatId: string): Promise<RoomW
   const placeholders = roomIds.map((_, index) => `$${index + 2}`).join(', ');
   const plants = await query<UserPlantRow>(
     `SELECT id, custom_name, room_id, catalog_id, last_repot_date, current_season,
-            next_watering_date, next_feeding_date, created_at
+            next_watering_date, next_feeding_date, photo_url, created_at
      FROM user_plants
      WHERE telegram_chat_id = $1
        AND room_id IN (${placeholders})
@@ -52,6 +53,41 @@ export async function createRoom(
     [id, name, telegramChatId],
   );
   return { id, name };
+}
+
+async function getRoomOrThrow(telegramChatId: string, roomId: string): Promise<RoomRow> {
+  const room = await queryOne<RoomRow>(
+    `SELECT id, name FROM rooms WHERE id = $1 AND telegram_chat_id = $2`,
+    [roomId, telegramChatId],
+  );
+  if (!room) {
+    throw new HttpError('Room not found', 404);
+  }
+  return room;
+}
+
+export async function updateRoom(
+  telegramChatId: string,
+  roomId: string,
+  name: string,
+): Promise<RoomRow> {
+  await getRoomOrThrow(telegramChatId, roomId);
+  await execute(`UPDATE rooms SET name = $1 WHERE id = $2 AND telegram_chat_id = $3`, [
+    name,
+    roomId,
+    telegramChatId,
+  ]);
+  return { id: roomId, name };
+}
+
+export async function deleteRoom(telegramChatId: string, roomId: string): Promise<void> {
+  const result = await queryOne<{ id: string }>(
+    `DELETE FROM rooms WHERE id = $1 AND telegram_chat_id = $2 RETURNING id`,
+    [roomId, telegramChatId],
+  );
+  if (!result) {
+    throw new HttpError('Room not found', 404);
+  }
 }
 
 export async function roomExists(telegramChatId: string, roomId: string): Promise<boolean> {

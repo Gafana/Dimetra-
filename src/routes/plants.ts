@@ -5,8 +5,17 @@ import {
   createPlantBodySchema,
   plantActionBodySchema,
   plantIdParamSchema,
+  updatePlantPhotoBodySchema,
+  updatePlantScheduleBodySchema,
 } from '../schemas/validation.js';
-import { createPlant, recordPlantAction, recordRepot } from '../services/plantsService.js';
+import {
+  createPlant,
+  listPlantCareHistory,
+  recordPlantAction,
+  recordRepot,
+  updatePlantPhoto,
+  updatePlantSchedule,
+} from '../services/plantsService.js';
 
 export const plantsRouter = Router();
 
@@ -19,6 +28,55 @@ plantsRouter.post('/', validateBody(createPlantBodySchema), async (req, res, nex
     next(error);
   }
 });
+
+plantsRouter.get(
+  '/:id/history',
+  validateParams(plantIdParamSchema),
+  async (req, res, next) => {
+    try {
+      const telegramChatId = requireTelegramChatId(req);
+      const { id } = req.params as { id: string };
+      res.json(await listPlantCareHistory(telegramChatId, id));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+plantsRouter.patch(
+  '/:id/schedule',
+  validateParams(plantIdParamSchema),
+  validateBody(updatePlantScheduleBodySchema),
+  async (req, res, next) => {
+    try {
+      const telegramChatId = requireTelegramChatId(req);
+      const { id } = req.params as { id: string };
+      const body = req.body as {
+        next_watering_date?: string | null;
+        next_feeding_date?: string | null;
+      };
+      res.json(await updatePlantSchedule(telegramChatId, id, body));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+plantsRouter.patch(
+  '/:id/photo',
+  validateParams(plantIdParamSchema),
+  validateBody(updatePlantPhotoBodySchema),
+  async (req, res, next) => {
+    try {
+      const telegramChatId = requireTelegramChatId(req);
+      const { id } = req.params as { id: string };
+      const { photo_url } = req.body as { photo_url: string | null };
+      res.json(await updatePlantPhoto(telegramChatId, id, photo_url));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 plantsRouter.post(
   '/:id/action',

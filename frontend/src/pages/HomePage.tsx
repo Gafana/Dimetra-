@@ -160,6 +160,9 @@ export function HomePage() {
                   key={plant.id}
                   plant={plant}
                   pendingAction={pending[plant.id] ?? null}
+                  onPlantUpdate={(updated) =>
+                    setRooms((prev) => mergePlantIntoRooms(prev, updated))
+                  }
                   onWater={(id) =>
                     void runPlantMutation(id, 'watering', () => performPlantAction(id, 'watering'))
                   }

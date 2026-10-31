@@ -1,57 +1,44 @@
-export type Season = 'summer' | 'winter';
+export type {
+  LightRequirementLevel,
+  PlantCatalogEntry,
+  PlantCatalogFile,
+  PlantCatalogPickerEntry,
+  PlantEncyclopediaFields,
+  Season,
+  SeasonCareIntervals,
+} from './catalogTypes.js';
 
-export interface SeasonCareIntervals {
-  /** Интервал полива в днях */
-  wateringDays: number;
-  /** Интервал подкормки в днях */
-  feedingDays: number;
+export { LEGACY_CATALOG_ENTRIES } from './legacyCatalog.js';
+export { seedPlantCatalogIfEmpty } from './seedPlantCatalog.js';
+
+import type { PlantCatalogEntry, Season } from './catalogTypes.js';
+import {
+  findPlantCatalogById,
+  listPlantCatalog,
+  listPlantCatalogPicker,
+} from '../services/plantCatalogService.js';
+
+export async function findCatalogPlant(catalogId: string): Promise<PlantCatalogEntry | undefined> {
+  return findPlantCatalogById(catalogId);
 }
 
-export interface PlantCatalogEntry {
-  id: string;
-  name: string;
-  seasons: Record<Season, SeasonCareIntervals>;
+export async function getPlantCatalog(search?: string): Promise<PlantCatalogEntry[]> {
+  return listPlantCatalog(search);
 }
 
-export const PLANT_CATALOG: readonly PlantCatalogEntry[] = [
-  {
-    id: 'monstera',
-    name: 'Монстера',
-    seasons: {
-      summer: { wateringDays: 6, feedingDays: 14 },
-      winter: { wateringDays: 12, feedingDays: 30 },
-    },
-  },
-  {
-    id: 'ficus-benjamina',
-    name: 'Фикус Бенджамина',
-    seasons: {
-      summer: { wateringDays: 7, feedingDays: 14 },
-      winter: { wateringDays: 12, feedingDays: 30 },
-    },
-  },
-  {
-    id: 'zamioculcas',
-    name: 'Замиокулькас',
-    seasons: {
-      summer: { wateringDays: 18, feedingDays: 30 },
-      winter: { wateringDays: 28, feedingDays: 60 },
-    },
-  },
-  {
-    id: 'aloe-vera',
-    name: 'Алоэ Вера',
-    seasons: {
-      summer: { wateringDays: 14, feedingDays: 30 },
-      winter: { wateringDays: 21, feedingDays: 60 },
-    },
-  },
-  {
-    id: 'kalanchoe',
-    name: 'Каланхоэ',
-    seasons: {
-      summer: { wateringDays: 10, feedingDays: 21 },
-      winter: { wateringDays: 16, feedingDays: 30 },
-    },
-  },
-] as const;
+export async function getPlantCatalogPicker(): Promise<
+  import('./catalogTypes.js').PlantCatalogPickerEntry[]
+> {
+  return listPlantCatalogPicker();
+}
+
+export async function getCareIntervals(
+  catalogId: string,
+  season: Season,
+): Promise<{ wateringDays: number; feedingDays: number }> {
+  const plant = await findCatalogPlant(catalogId);
+  if (!plant) {
+    throw new Error(`Unknown catalog_id: ${catalogId}`);
+  }
+  return plant.seasons[season];
+}

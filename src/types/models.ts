@@ -14,7 +14,15 @@ export interface UserPlantRow {
   current_season: Season;
   next_watering_date: string | null;
   next_feeding_date: string | null;
+  photo_url: string | null;
   created_at: string;
+}
+
+export interface CareHistoryRow {
+  id: string;
+  plant_id: string;
+  action_type: CareActionType;
+  done_at: string;
 }
 
 export interface RoomWithPlants extends RoomRow {
@@ -28,3 +36,18 @@ export interface UserSettingsRow {
 }
 
 export type CareActionType = 'watering' | 'feeding' | 'repot';
+
+export type CalendarEventKind = 'scheduled' | 'completed';
+
+export interface CalendarEvent {
+  id: string;
+  plant_id: string;
+  plant_name: string;
+  room_name: string | null;
+  action_type: CareActionType;
+  event_kind: CalendarEventKind;
+  /** YYYY-MM-DD */
+  date: string;
+  /** ISO 8601, только для выполненных */
+  done_at?: string;
+}

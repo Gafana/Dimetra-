@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getLocalDevChatId, isBrowserLocalDevMode } from '../lib/localDev.js';
 
 function resolveApiBaseUrl(): string {
   const primary = import.meta.env.VITE_API_URL;
@@ -24,6 +25,11 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
+  if (isBrowserLocalDevMode()) {
+    config.headers.set('X-Local-Dev-Chat-Id', getLocalDevChatId());
+    return config;
+  }
+
   const initData = window.Telegram?.WebApp?.initData;
   if (initData) {
     config.headers.set('X-Telegram-Init-Data', initData);

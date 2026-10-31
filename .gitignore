@@ -9,4 +9,5 @@ data/
 .env.local
 .neon
 frontend/.env
+frontend/.env.local
 .tools/

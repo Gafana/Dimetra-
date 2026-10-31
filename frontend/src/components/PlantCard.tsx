@@ -1,6 +1,16 @@
-import { Droplets, Leaf, Shovel, Sparkles } from 'lucide-react';
+import { Camera, Clock, Droplets, Shovel, Sparkles } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
+import {
+  updatePlantPhoto,
+  updatePlantSchedule,
+  type PlantCareAction,
+  type UserPlant,
+} from '../api/index.js';
 import { formatDisplayDate, isCareDue, todayIsoDate } from '../lib/dates.js';
-import type { PlantCareAction, UserPlant } from '../api/types.js';
+import { compressPlantPhotoFile } from '../lib/compressPlantPhoto.js';
+import { getApiErrorMessage } from '../lib/apiError.js';
+import { showTelegramAlert } from '../lib/telegramUi.js';
+import { PlantCareHistoryModal } from './PlantCareHistoryModal.js';
 import { GlassPanel } from './ui/GlassPanel.js';
 import { Spinner } from './ui/Spinner.js';
 
@@ -10,83 +20,194 @@ interface PlantCardProps {
   onWater: (plantId: string) => void;
   onFeed: (plantId: string) => void;
   onRepot: (plantId: string) => void;
+  onPlantUpdate: (plant: UserPlant) => void;
 }
 
-export function PlantCard({ plant, pendingAction, onWater, onFeed, onRepot }: PlantCardProps) {
+export function PlantCard({
+  plant,
+  pendingAction,
+  onWater,
+  onFeed,
+  onRepot,
+  onPlantUpdate,
+}: PlantCardProps) {
   const today = todayIsoDate();
   const wateringDue = isCareDue(plant.next_watering_date, today);
   const feedingDue = isCareDue(plant.next_feeding_date, today);
+  const inputId = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState<'watering' | 'feeding' | null>(null);
+  const actionsLocked = Boolean(pendingAction) || uploadingPhoto || savingSchedule !== null;
+
+  const handlePhotoPick = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const dataUrl = await compressPlantPhotoFile(file);
+      const updated = await updatePlantPhoto(plant.id, dataUrl);
+      onPlantUpdate(updated);
+    } catch (error) {
+      showTelegramAlert(getApiErrorMessage(error, 'Не удалось загрузить фото'));
+    } finally {
+      setUploadingPhoto(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const saveScheduleDate = async (
+    field: 'watering' | 'feeding',
+    isoDate: string,
+  ) => {
+    setSavingSchedule(field);
+    try {
+      const patch =
+        field === 'watering'
+          ? { next_watering_date: isoDate || null }
+          : { next_feeding_date: isoDate || null };
+      const updated = await updatePlantSchedule(plant.id, patch);
+      onPlantUpdate(updated);
+    } catch (error) {
+      showTelegramAlert(getApiErrorMessage(error, 'Не удалось сохранить дату'));
+    } finally {
+      setSavingSchedule(null);
+    }
+  };
 
   return (
-    <GlassPanel className="overflow-hidden p-0">
-      <div className="relative h-28 bg-gradient-to-br from-forest-700/80 via-forest-800/60 to-forest-950/90">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(184,212,196,0.25),transparent_55%)]" />
-        <Leaf
-          className="absolute bottom-3 right-3 h-16 w-16 text-sage-300/25"
-          strokeWidth={1}
+    <>
+      <GlassPanel className="overflow-hidden p-0">
+        <div className="relative h-28 bg-gradient-to-br from-forest-700/80 via-forest-800/60 to-forest-950/90">
+          {plant.photo_url ? (
+            <img
+              src={plant.photo_url}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(184,212,196,0.25),transparent_55%)]" />
+            </>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-forest-950/70 via-transparent to-forest-950/20" />
+
+          <button
+            type="button"
+            aria-label="История ухода"
+            disabled={Boolean(pendingAction)}
+            onClick={() => setHistoryOpen(true)}
+            className={`${overlayIconButtonClass} right-3`}
+            title="История ухода"
+          >
+            <Clock className="h-4 w-4" strokeWidth={1.75} />
+          </button>
+
+          <label
+            htmlFor={inputId}
+            className={`${overlayIconButtonClass} left-3 cursor-pointer`}
+            title="Добавить фото"
+          >
+            {uploadingPhoto ? (
+              <Spinner className="h-4 w-4" />
+            ) : (
+              <Camera className="h-4 w-4" strokeWidth={1.75} />
+            )}
+          </label>
+          <input
+            id={inputId}
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={uploadingPhoto || Boolean(pendingAction)}
+            onChange={(e) => void handlePhotoPick(e.target.files?.[0])}
+          />
+
+          {(wateringDue || feedingDue) && (
+            <div className="absolute left-3 right-3 top-14 flex flex-wrap justify-center gap-1">
+              {wateringDue ? <StatusBadge label="Полив" tone="amber" /> : null}
+              {feedingDue ? <StatusBadge label="Удобр." tone="mint" /> : null}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3 p-4">
+          <div>
+            <h3 className="font-serif text-xl leading-tight text-sage-100">{plant.custom_name}</h3>
+            <p className="text-xs text-sage-400/90">
+              {plant.current_season === 'summer' ? 'Летний режим' : 'Зимний режим'}
+            </p>
+          </div>
+
+          <dl className="grid grid-cols-2 gap-2 text-xs">
+            <EditableDateMetric
+              label="Полив"
+              isoDate={plant.next_watering_date}
+              disabled={actionsLocked}
+              saving={savingSchedule === 'watering'}
+              onSave={(iso) => void saveScheduleDate('watering', iso)}
+            />
+            <EditableDateMetric
+              label="Подкормка"
+              isoDate={plant.next_feeding_date}
+              disabled={actionsLocked}
+              saving={savingSchedule === 'feeding'}
+              onSave={(iso) => void saveScheduleDate('feeding', iso)}
+            />
+          </dl>
+
+          <div className="grid grid-cols-3 gap-2">
+            <IconAction
+              label="Полить"
+              icon={Droplets}
+              loading={pendingAction === 'watering'}
+              disabled={Boolean(pendingAction)}
+              onClick={() => onWater(plant.id)}
+            />
+            <IconAction
+              label="Удобрить"
+              icon={Sparkles}
+              loading={pendingAction === 'feeding'}
+              disabled={Boolean(pendingAction)}
+              onClick={() => onFeed(plant.id)}
+            />
+            <IconAction
+              label="Пересадить"
+              icon={Shovel}
+              loading={pendingAction === 'repot'}
+              disabled={Boolean(pendingAction)}
+              variant="ghost"
+              onClick={() => onRepot(plant.id)}
+            />
+          </div>
+        </div>
+      </GlassPanel>
+
+      {historyOpen ? (
+        <PlantCareHistoryModal
+          plantId={plant.id}
+          plantName={plant.custom_name}
+          onClose={() => setHistoryOpen(false)}
         />
-        <div className="absolute left-3 top-3 flex flex-wrap gap-1">
-          {wateringDue ? <StatusBadge label="Полив" tone="amber" /> : null}
-          {feedingDue ? <StatusBadge label="Корм" tone="mint" /> : null}
-          {!wateringDue && !feedingDue ? (
-            <StatusBadge label="OK" tone="muted" />
-          ) : null}
-        </div>
-      </div>
-
-      <div className="space-y-3 p-4">
-        <div>
-          <h3 className="font-serif text-xl leading-tight text-sage-100">{plant.custom_name}</h3>
-          <p className="text-xs text-sage-400/90">
-            {plant.current_season === 'summer' ? 'Летний режим' : 'Зимний режим'}
-          </p>
-        </div>
-
-        <dl className="grid grid-cols-2 gap-2 text-xs">
-          <Metric label="Полив" value={formatDisplayDate(plant.next_watering_date)} />
-          <Metric label="Подкормка" value={formatDisplayDate(plant.next_feeding_date)} />
-        </dl>
-
-        <div className="flex gap-2">
-          <IconAction
-            label="Полить"
-            icon={Droplets}
-            loading={pendingAction === 'watering'}
-            disabled={Boolean(pendingAction)}
-            onClick={() => onWater(plant.id)}
-          />
-          <IconAction
-            label="Корм"
-            icon={Sparkles}
-            loading={pendingAction === 'feeding'}
-            disabled={Boolean(pendingAction)}
-            onClick={() => onFeed(plant.id)}
-          />
-          <IconAction
-            label="Горшок"
-            icon={Shovel}
-            loading={pendingAction === 'repot'}
-            disabled={Boolean(pendingAction)}
-            variant="ghost"
-            onClick={() => onRepot(plant.id)}
-          />
-        </div>
-      </div>
-    </GlassPanel>
+      ) : null}
+    </>
   );
 }
+
+const overlayIconButtonClass =
+  'absolute top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-sage-100 ring-1 ring-white/20 backdrop-blur-sm transition-colors hover:bg-black/55 disabled:opacity-50';
 
 function StatusBadge({
   label,
   tone,
 }: {
   label: string;
-  tone: 'amber' | 'mint' | 'muted';
+  tone: 'amber' | 'mint';
 }) {
   const styles = {
     amber: 'bg-amber-400/15 text-amber-100 ring-amber-300/25',
     mint: 'bg-sage-400/20 text-sage-100 ring-sage-300/30',
-    muted: 'bg-white/10 text-sage-300 ring-white/10',
   }[tone];
 
   return (
@@ -96,11 +217,60 @@ function StatusBadge({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function EditableDateMetric({
+  label,
+  isoDate,
+  disabled,
+  saving,
+  onSave,
+}: {
+  label: string;
+  isoDate: string | null;
+  disabled?: boolean;
+  saving?: boolean;
+  onSave: (isoDate: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const display = formatDisplayDate(isoDate);
+
+  const openPicker = () => {
+    if (disabled || saving) return;
+    const input = inputRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+    } else {
+      input.click();
+    }
+  };
+
   return (
-    <div className="rounded-xl bg-white/5 px-2.5 py-2 ring-1 ring-white/5">
-      <dt className="text-sage-400/80">{label}</dt>
-      <dd className="font-medium text-sage-100">{value}</dd>
+    <div className="relative rounded-xl bg-white/5 ring-1 ring-white/5">
+      <button
+        type="button"
+        disabled={disabled || saving}
+        onClick={openPicker}
+        className="w-full px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06] disabled:opacity-50"
+        title={`Изменить дату: ${label}`}
+      >
+        <span className="text-sage-400/80">{label}</span>
+        <span className="mt-0.5 flex items-center gap-1 font-medium text-sage-100">
+          {saving ? <Spinner className="h-3.5 w-3.5" /> : null}
+          {display}
+        </span>
+      </button>
+      <input
+        ref={inputRef}
+        type="date"
+        className="pointer-events-none absolute h-0 w-0 opacity-0"
+        value={isoDate ?? ''}
+        disabled={disabled || saving}
+        onChange={(e) => {
+          if (e.target.value) {
+            onSave(e.target.value);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -127,7 +297,7 @@ function IconAction({
       title={label}
       onClick={onClick}
       className={[
-        'inline-flex flex-1 flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-medium disabled:opacity-50',
+        'inline-flex flex-col items-center gap-1 rounded-xl py-2 text-[9px] font-medium disabled:opacity-50',
         variant === 'primary' ? 'btn-primary' : 'glass text-sage-200',
       ].join(' ')}
     >
