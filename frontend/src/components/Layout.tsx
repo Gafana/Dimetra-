@@ -117,7 +117,7 @@ export function Layout() {
         className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
         aria-label="Основная навигация"
       >
-        <div className="glass overflow-hidden rounded-[1.75rem] py-2">
+        <div className="modal-panel overflow-hidden rounded-[1.75rem] py-2">
           <div className="scrollbar-none flex snap-x snap-proximity gap-1 overflow-x-auto overscroll-x-contain scroll-px-3 px-3 touch-pan-x">
             <NavItem to="/" end icon={Home} label="Главная" />
             <NavItem to="/calendar" icon={CalendarDays} label="Календарь" />
@@ -133,7 +133,7 @@ export function Layout() {
 
 function GlassHeader() {
   return (
-    <div className="glass flex items-center justify-between rounded-[1.5rem] px-4 py-3">
+    <div className="modal-panel flex items-center justify-between rounded-[1.5rem] px-4 py-3">
       <div className="w-10" />
       <BrandLogo compact />
       <div className="w-10" />
