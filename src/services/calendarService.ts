@@ -1,6 +1,6 @@
 import { query } from '../db/pool.js';
 import { calendarEventStatus, nextRepotIsoDate } from '../lib/plantCareStatus.js';
-import { todayIsoDateInTimeZone } from '../lib/time.js';
+import { isoDateFromInstantInTimeZone, todayIsoDateInTimeZone } from '../lib/time.js';
 import { listObligationsInRange, syncCareObligationsForUser } from './careObligationService.js';
 import { ensureSettingsForChat } from './settingsService.js';
 import type { CalendarEvent, CareActionType } from '../types/models.js';
@@ -29,8 +29,8 @@ interface HistoryCalendarRow {
   done_at: string;
 }
 
-function historyDateFromDoneAt(doneAt: string): string {
-  return doneAt.slice(0, 10);
+function historyDateFromDoneAt(doneAt: string, timeZone: string): string {
+  return isoDateFromInstantInTimeZone(doneAt, timeZone);
 }
 
 function pushScheduled(
@@ -104,6 +104,7 @@ export async function listCalendarEvents(
     });
   }
 
+  const timeZone = settings.timezone;
   const history = await query<HistoryCalendarRow>(
     `SELECT ch.id, ch.plant_id, ch.action_type, ch.done_at,
             up.custom_name AS plant_name, r.name AS room_name
@@ -111,13 +112,13 @@ export async function listCalendarEvents(
      INNER JOIN user_plants up ON up.id = ch.plant_id
      LEFT JOIN rooms r ON r.id = up.room_id
      WHERE up.telegram_chat_id = $1
-       AND ch.done_at::date >= $2::date
-       AND ch.done_at::date <= $3::date`,
-    [telegramChatId, from, to],
+       AND (ch.done_at::timestamptz AT TIME ZONE $4)::date >= $2::date
+       AND (ch.done_at::timestamptz AT TIME ZONE $4)::date <= $3::date`,
+    [telegramChatId, from, to, timeZone],
   );
 
   for (const row of history) {
-    const date = historyDateFromDoneAt(row.done_at);
+    const date = historyDateFromDoneAt(row.done_at, timeZone);
     events.push({
       id: row.id,
       plant_id: row.plant_id,
