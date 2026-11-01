@@ -1,7 +1,8 @@
-import { BookOpen, CalendarDays, Home, PlusCircle, Settings } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { BrandLogo } from './BrandLogo.js';
 import { LocalDevBanner } from './LocalDevBanner.js';
+import { BookOpen, CalendarDays, Home, PlusCircle, Settings } from 'lucide-react';
+import { NavLink, Outlet } from 'react-router-dom';
 
 function NavItem({
   to,
@@ -42,16 +43,72 @@ function NavItem({
   );
 }
 
+function useCollapsingAppHeader() {
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const [headerOffset, setHeaderOffset] = useState(0);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) {
+      return;
+    }
+
+    const syncHeight = () => {
+      setHeaderOffset(header.offsetHeight);
+    };
+
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    const deltaThreshold = 6;
+
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY <= 0) {
+        setHeaderHidden(false);
+      } else if (currentY > lastScrollY + deltaThreshold) {
+        setHeaderHidden(true);
+      } else if (currentY < lastScrollY - deltaThreshold) {
+        setHeaderHidden(false);
+      }
+      lastScrollY = currentY;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return { headerRef, headerHidden, headerOffset };
+}
+
 export function Layout() {
+  const { headerRef, headerHidden, headerOffset } = useCollapsingAppHeader();
+
   return (
     <div className="relative flex min-h-full flex-col text-sage-100">
       <div className="app-bg" aria-hidden />
 
-      <header className="sticky top-0 z-10 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <header
+        ref={headerRef}
+        className={[
+          'fixed left-0 right-0 top-0 z-10 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
+          'transition-transform duration-300 ease-out will-change-transform',
+          headerHidden ? '-translate-y-full' : 'translate-y-0',
+        ].join(' ')}
+      >
         <GlassHeader />
       </header>
 
-      <main className="flex-1 px-4 pb-28 pt-2">
+      <main
+        className="flex-1 px-4 pb-28 pt-2"
+        style={{ paddingTop: headerOffset > 0 ? headerOffset + 8 : undefined }}
+      >
         <LocalDevBanner />
         <Outlet />
       </main>

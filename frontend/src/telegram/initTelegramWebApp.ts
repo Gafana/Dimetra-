@@ -8,10 +8,10 @@ export function initTelegramWebApp(): void {
 
   webApp.ready();
   webApp.expand();
-  applyTelegramTheme(webApp.themeParams);
+  applyTelegramTheme(webApp.themeParams, webApp.colorScheme);
 
   const onThemeChanged = (): void => {
-    applyTelegramTheme(webApp.themeParams);
+    applyTelegramTheme(webApp.themeParams, webApp.colorScheme);
   };
 
   webApp.onEvent('themeChanged', onThemeChanged);

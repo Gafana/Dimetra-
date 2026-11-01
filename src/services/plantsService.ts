@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getCareIntervals, findCatalogPlant } from '../lib/catalog.js';
-import { addDaysToIsoDate, nowIsoDateTime, todayIsoDate } from '../lib/dates.js';
+import { addDaysToIsoDate, nowIsoDateTime } from '../lib/dates.js';
 import { execute, query, queryOne } from '../db/pool.js';
 import type { Season } from '../db/catalog.js';
 import { HttpError } from '../lib/errors.js';
@@ -86,7 +86,7 @@ export async function createPlant(
   }
 
   const intervals = await getCareIntervals(input.catalog_id, input.current_season);
-  const baseDate = todayIsoDate();
+  const baseDate = await todayForUser(telegramChatId);
 
   const plant = {
     id: uuidv4(),
@@ -279,7 +279,7 @@ export async function recordRepot(
   plantId: string,
 ): Promise<UserPlantWithCareStatus> {
   const plant = await getPlantOrThrow(telegramChatId, plantId);
-  const repotDate = todayIsoDate();
+  const repotDate = await todayForUser(telegramChatId);
 
   await insertCareHistory(plantId, 'repot', nowIsoDateTime());
 

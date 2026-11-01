@@ -60,6 +60,27 @@ export function todayIsoDateInTimeZone(timeZone: string, now = new Date()): stri
   return zonedClock(tz, now).dateIso;
 }
 
+const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Календарный день YYYY-MM-DD для момента времени (ISO 8601) в IANA-часовом поясе пользователя.
+ * Используется для отметок выполненного ухода в календаре.
+ */
+export function isoDateFromInstantInTimeZone(
+  isoDateTime: string,
+  timeZone: string,
+): string {
+  if (ISO_DATE_ONLY.test(isoDateTime)) {
+    return isoDateTime;
+  }
+  const instant = new Date(isoDateTime);
+  if (Number.isNaN(instant.getTime())) {
+    throw new Error(`Invalid ISO datetime: ${isoDateTime}`);
+  }
+  const tz = isValidIanaTimeZone(timeZone) ? timeZone : DEFAULT_USER_TIMEZONE;
+  return zonedClock(tz, instant).dateIso;
+}
+
 export function parseNotificationTimeToMinutes(notificationTime: string): number {
   const [hours, minutes] = notificationTime.split(':').map(Number);
   return hours * 60 + minutes;

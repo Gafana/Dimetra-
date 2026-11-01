@@ -11,7 +11,6 @@ import {
 } from '../api/index.js';
 import { getApiErrorMessage } from '../lib/apiError.js';
 import { showTelegramAlert } from '../lib/telegramUi.js';
-import { GlassPanel } from './ui/GlassPanel.js';
 import { Spinner } from './ui/Spinner.js';
 
 export function PlantEditModal({
@@ -108,9 +107,9 @@ export function PlantEditModal({
       onClick={onClose}
     >
       <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <GlassPanel strong className="max-h-[min(85vh,32rem)] overflow-hidden p-0">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <h3 id="plant-edit-title" className="font-serif text-lg text-sage-100">
+        <div className="modal-panel max-h-[min(85vh,32rem)] overflow-hidden rounded-[1.75rem] p-0">
+          <div className="modal-panel-border flex items-center justify-between border-b px-4 py-3">
+            <h3 id="plant-edit-title" className="font-serif text-lg">
               Редактирование
             </h3>
             <button
@@ -118,7 +117,7 @@ export function PlantEditModal({
               aria-label="Закрыть"
               onClick={onClose}
               disabled={busy}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sage-300 hover:bg-white/10 disabled:opacity-50"
+              className="modal-panel-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-xl hover:opacity-80 disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
@@ -129,7 +128,7 @@ export function PlantEditModal({
             onSubmit={(event) => void handleSubmit(event)}
           >
             <label className="block space-y-2 text-sm">
-              <span className="font-medium text-sage-200">Имя растения</span>
+              <span className="modal-panel-muted font-medium">Имя растения</span>
               <input
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
@@ -139,7 +138,7 @@ export function PlantEditModal({
             </label>
 
             <label className="block space-y-2 text-sm">
-              <span className="font-medium text-sage-200">Комната</span>
+              <span className="modal-panel-muted font-medium">Комната</span>
               <select
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
@@ -156,7 +155,7 @@ export function PlantEditModal({
             </label>
 
             <fieldset className="space-y-2" disabled={busy}>
-              <legend className="text-sm font-medium text-sage-200">Сезон</legend>
+              <legend className="modal-panel-muted text-sm font-medium">Сезон</legend>
               <div className="flex gap-2">
                 {(['summer', 'winter'] as const).map((value) => (
                   <button
@@ -176,7 +175,7 @@ export function PlantEditModal({
 
             <div className="grid grid-cols-2 gap-3">
               <label className="block space-y-2 text-sm">
-                <span className="font-medium text-sage-200">Следующий полив</span>
+                <span className="modal-panel-muted font-medium">Следующий полив</span>
                 <input
                   type="date"
                   value={nextWatering}
@@ -186,7 +185,7 @@ export function PlantEditModal({
                 />
               </label>
               <label className="block space-y-2 text-sm">
-                <span className="font-medium text-sage-200">Следующая подкормка</span>
+                <span className="modal-panel-muted font-medium">Следующая подкормка</span>
                 <input
                   type="date"
                   value={nextFeeding}
@@ -216,7 +215,7 @@ export function PlantEditModal({
               Удалить растение
             </button>
           </form>
-        </GlassPanel>
+        </div>
       </div>
     </div>
   );

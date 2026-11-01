@@ -25,6 +25,10 @@
   --tg-button: #8fb89a;
   --tg-button-text: #0f1612;
   --tg-secondary-bg: rgba(255, 255, 255, 0.06);
+  --modal-bg: #1a2421;
+  --modal-border: rgba(255, 255, 255, 0.12);
+  --modal-text: #e8f0eb;
+  --modal-muted: #a8c3b0;
 }
 
 html,
@@ -131,4 +135,19 @@ select option {
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+.modal-panel {
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  color: var(--modal-text);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+}
+
+.modal-panel-muted {
+  color: var(--modal-muted);
+}
+
+.modal-panel-border {
+  border-color: var(--modal-border);
 }
